@@ -1,0 +1,16 @@
+[package]
+name = "sz3-rs"
+version = "0.1.0+3.1.5.1"
+edition = "2021"
+
+[dependencies]
+sz3-sys = { path = "sz3-sys", version = "0.1.0+SZ3-3.1.5.1" }
+thiserror = "1.0.31"
+
+[dev-dependencies]
+bytemuck = "1.9.1"
+align-data = "0.1.0"
+paste = "1.0.7"
+
+[profile.release]
+lto = "thin"
