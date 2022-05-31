@@ -149,6 +149,7 @@ namespace SZ {
 //            writefile("quant.dat", quant_inds.data(), num_elements);
             encoder.preprocess_encode(quant_inds, 0);
             size_t bufferSize = 1.2 * (quantizer.size_est() + encoder.size_est() + sizeof(T) * quant_inds.size());
+            /* printf("bufferSize = %ld\n", bufferSize); */
 
             uchar *buffer = new uchar[bufferSize];
             uchar *buffer_pos = buffer;

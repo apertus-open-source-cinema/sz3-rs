@@ -1,10 +1,10 @@
 [package]
 name = "sz3"
-version = "0.1.0+3.1.5.1"
+version = "0.1.0+3.1.5.3"
 edition = "2021"
 
 [dependencies]
-sz3-sys = { path = "sz3-sys", version = "0.1.0+SZ3-3.1.5.1" }
+sz3-sys = { path = "sz3-sys", version = "0.1.0+SZ3-3.1.5.3" }
 thiserror = "1.0.31"
 
 [dev-dependencies]

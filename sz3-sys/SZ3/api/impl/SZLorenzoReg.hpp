@@ -58,6 +58,7 @@ make_lorenzo_regression_compressor(const SZ::Config &conf, Quantizer quantizer, 
             predictors.push_back(std::make_shared<SZ::RegressionPredictor<T, N>>(conf.blockSize, conf.absErrorBound));
         }
     }
+
     if (conf.regression2) {
         if (use_single_predictor) {
             return SZ::make_sz_general_compressor<T, N>(

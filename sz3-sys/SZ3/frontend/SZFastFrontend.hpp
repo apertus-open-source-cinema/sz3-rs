@@ -158,7 +158,7 @@ namespace SZ {
         size_t size_est() {
             return quantizer.size_est() //unpred
                    + indicator.size() * sizeof(int) //loren or reg indicator
-                   + RegCoeffNum3d * reg_count * sizeof(int) // reg coeff quant
+                   + 2 * RegCoeffNum3d * reg_count * sizeof(int) // reg coeff quant
                    + (reg_unpredictable_data_pos - reg_unpredictable_data) * sizeof(float); //reg coeff unpred
         }
 

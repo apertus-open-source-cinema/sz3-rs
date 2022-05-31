@@ -147,7 +147,8 @@ namespace SZ {
 //            predictor.print();
 
             encoder.preprocess_encode(quant_inds, 0);
-            size_t bufferSize = 1.2 * (quant_inds.size() * sizeof(T) + quantizer.size_est() + encoder.size_est());
+            size_t bufferSize = 1.2 * (quantizer.size_est() + encoder.size_est() + sizeof(T) * quant_inds.size());
+
             uchar *buffer = new uchar[bufferSize];
             uchar *buffer_pos = buffer;
 

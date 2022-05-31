@@ -16,6 +16,7 @@
 #include <unordered_map>
 #include <unordered_set>
 #include <set>
+#include <omp.h>
 
 
 namespace SZ {
@@ -129,7 +130,8 @@ namespace SZ {
 
         size_t size_est() {
             size_t b = (nodeCount <= 256) ? sizeof(unsigned char) : ((nodeCount <= 65536) ? sizeof(unsigned short) : sizeof(unsigned int));
-            return 1 + 2 * nodeCount * b + nodeCount * sizeof(unsigned char) + nodeCount * sizeof(T) + sizeof(int) + sizeof(int) + sizeof(T);
+            /* printf("[%ld] encodedSize = %ld\n", omp_get_thread_num(), encodedSize); */
+            return 1 + 2 * nodeCount * b + nodeCount * sizeof(unsigned char) + nodeCount * sizeof(T) + sizeof(int) + sizeof(int) + sizeof(T) + encodedSize;
         }
 
         //perform encoding
@@ -215,6 +217,7 @@ namespace SZ {
             }
             *reinterpret_cast<size_t *>(bytes) = outSize;
             bytes += sizeof(size_t) + outSize;
+            /* printf("[%ld] outSize = %ld\n", omp_get_thread_num(), outSize); */
             return outSize;
         }
 
@@ -295,6 +298,7 @@ namespace SZ {
         uchar sysEndianType; //0: little endian, 1: big endian
         bool loaded = false;
         T offset;
+        size_t encodedSize;
 
 
         node reconstruct_HuffTree_from_bytes_anyStates(const unsigned char *bytes, uint nodeCount) {
@@ -552,6 +556,13 @@ namespace SZ {
             build_code(huffmanTree->qq[1], 0, 0, 0);
             treeRoot = huffmanTree->qq[1];
 
+            size_t numBits = 0;
+            for (const auto &kv: frequency) {
+                auto value = kv.first;
+                auto freq = kv.second;
+                numBits += huffmanTree->cout[value - offset] * freq;
+            }
+            encodedSize = (numBits + 7) / 8;
         }
 
         template<class T1>

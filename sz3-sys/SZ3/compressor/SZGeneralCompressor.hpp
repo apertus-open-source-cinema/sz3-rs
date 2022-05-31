@@ -33,6 +33,7 @@ namespace SZ {
 
             encoder.preprocess_encode(quant_inds, 0);
             size_t bufferSize = 1.2 * (frontend.size_est() + encoder.size_est() + sizeof(T) * quant_inds.size());
+            /* printf("bufferSize = %ld\n", bufferSize); */
 
             uchar *buffer = new uchar[bufferSize];
             uchar *buffer_pos = buffer;
