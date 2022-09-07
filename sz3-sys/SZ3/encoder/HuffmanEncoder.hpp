@@ -16,7 +16,6 @@
 #include <unordered_map>
 #include <unordered_set>
 #include <set>
-#include <omp.h>
 
 
 namespace SZ {

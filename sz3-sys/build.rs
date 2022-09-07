@@ -32,9 +32,10 @@ fn main() -> Result<(), std::env::VarError> {
 
     println!("cargo:rerun-if-changed=wrapper.hpp");
     let bindings = bindgen::Builder::default()
+        .clang_arg("-x").clang_arg("c++")
+        .clang_arg("-std=c++17")
         .clang_arg("-I.")
         .clang_arg(format!("-I{}/include", zstd_root))
-        .clang_arg("-fopenmp")
         .header("wrapper.hpp")
         .parse_callbacks(Box::new(bindgen::CargoCallbacks))
         .parse_callbacks(Box::new(ignored_macros))
@@ -65,24 +66,33 @@ fn main() -> Result<(), std::env::VarError> {
         .expect("Couldn't write bindings!");
 
     let mut build = cc::Build::new();
-    env::var("DEP_OPENMP_FLAG")
-        .unwrap()
-        .split(' ')
-        .for_each(|f| {
-            build.flag(f);
-        });
+
     build
         .cpp(true)
         .warnings(false)
-        .flag("-fopenmp")
+        .flag("-std=c++17")
         .include(".")
         .include(format!("{}/include", zstd_root))
-        .file("lib.cpp")
-        .compile("sz3");
+        .file("lib.cpp");
+
+    // openmp is not available in the stock clang that ships with macos so we disable openmp support
+    if !cfg!(target_os = "macos") {
+        env::var("DEP_OPENMP_FLAG")  // set by openmp-sys
+            .unwrap()
+            .split(' ')
+            .for_each(|f| {
+                build.flag(f);
+            });
+    }
+
+    build.compile("sz3");
 
     println!("cargo:rustc-link-lib=static=zstd");
     if let Some(link) = env::var_os("DEP_OPENMP_CARGO_LINK_INSTRUCTIONS") {
         for i in env::split_paths(&link) {
+            if i.as_os_str().len() == 0 {
+                continue
+            }
             println!("cargo:{}", i.display());
         }
     }
