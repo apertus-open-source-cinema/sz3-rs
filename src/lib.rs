@@ -397,14 +397,14 @@ mod private {
             data: *const Self,
             len: *mut sz3_sys::size_t,
         ) -> *mut i8 {
-            sz3_sys::compress_float(config, data, len)
+            sz3_sys::compress_float(config, data, len) as _
         }
         unsafe fn decompress(
             compressed_data: *const i8,
             compressed_len: sz3_sys::size_t,
             uncompressed: *mut *mut Self,
         ) -> sz3_sys::SZ_Config {
-            sz3_sys::decompress_float(compressed_data, compressed_len, uncompressed)
+            sz3_sys::decompress_float(compressed_data as _, compressed_len, uncompressed)
         }
         unsafe fn dealloc(data: *mut Self) {
             sz3_sys::dealloc_result_float(data)
@@ -416,14 +416,14 @@ mod private {
             data: *const Self,
             len: *mut sz3_sys::size_t,
         ) -> *mut i8 {
-            sz3_sys::compress_double(config, data, len)
+            sz3_sys::compress_double(config, data, len) as _
         }
         unsafe fn decompress(
             compressed_data: *const i8,
             compressed_len: sz3_sys::size_t,
             uncompressed: *mut *mut Self,
         ) -> sz3_sys::SZ_Config {
-            sz3_sys::decompress_double(compressed_data, compressed_len, uncompressed)
+            sz3_sys::decompress_double(compressed_data as _, compressed_len, uncompressed)
         }
         unsafe fn dealloc(data: *mut Self) {
             sz3_sys::dealloc_result_double(data)
@@ -435,14 +435,14 @@ mod private {
             data: *const Self,
             len: *mut sz3_sys::size_t,
         ) -> *mut i8 {
-            sz3_sys::compress_int32_t(config, data, len)
+            sz3_sys::compress_int32_t(config, data, len) as _
         }
         unsafe fn decompress(
             compressed_data: *const i8,
             compressed_len: sz3_sys::size_t,
             uncompressed: *mut *mut Self,
         ) -> sz3_sys::SZ_Config {
-            sz3_sys::decompress_int32_t(compressed_data, compressed_len, uncompressed)
+            sz3_sys::decompress_int32_t(compressed_data as _, compressed_len, uncompressed)
         }
         unsafe fn dealloc(data: *mut Self) {
             sz3_sys::dealloc_result_int32_t(data)
@@ -454,14 +454,14 @@ mod private {
             data: *const Self,
             len: *mut sz3_sys::size_t,
         ) -> *mut i8 {
-            sz3_sys::compress_int64_t(config, data, len)
+            sz3_sys::compress_int64_t(config, data, len) as _
         }
         unsafe fn decompress(
             compressed_data: *const i8,
             compressed_len: sz3_sys::size_t,
             uncompressed: *mut *mut Self,
         ) -> sz3_sys::SZ_Config {
-            sz3_sys::decompress_int64_t(compressed_data, compressed_len, uncompressed)
+            sz3_sys::decompress_int64_t(compressed_data as _, compressed_len, uncompressed)
         }
         unsafe fn dealloc(data: *mut Self) {
             sz3_sys::dealloc_result_int64_t(data)
