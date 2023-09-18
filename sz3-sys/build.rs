@@ -75,8 +75,7 @@ fn main() -> Result<(), std::env::VarError> {
         .include(format!("{}/include", zstd_root))
         .file("lib.cpp");
 
-    // openmp is not available in the stock clang that ships with macos so we disable openmp support
-    if !cfg!(target_os = "macos") {
+    if cfg!(feature = "openmp") {
         env::var("DEP_OPENMP_FLAG")  // set by openmp-sys
             .unwrap()
             .split(' ')
@@ -88,12 +87,15 @@ fn main() -> Result<(), std::env::VarError> {
     build.compile("sz3");
 
     println!("cargo:rustc-link-lib=static=zstd");
-    if let Some(link) = env::var_os("DEP_OPENMP_CARGO_LINK_INSTRUCTIONS") {
-        for i in env::split_paths(&link) {
-            if i.as_os_str().len() == 0 {
-                continue
+
+    if cfg!(feature = "openmp") {
+        if let Some(link) = env::var_os("DEP_OPENMP_CARGO_LINK_INSTRUCTIONS") {
+            for i in env::split_paths(&link) {
+                if i.as_os_str().len() == 0 {
+                    continue
+                }
+                println!("cargo:{}", i.display());
             }
-            println!("cargo:{}", i.display());
         }
     }
 
