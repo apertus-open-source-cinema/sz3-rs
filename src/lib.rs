@@ -626,6 +626,7 @@ impl Config {
         self
     }
 
+    #[cfg(feature = "openmp")]
     pub fn openmp(mut self, openmp: bool) -> Self {
         self.openmp = openmp;
         self
@@ -933,8 +934,9 @@ mod tests {
     }
 
     macro_rules! gen_test {
-        (($lossless_name:ident, $lossless:expr), $openmp:expr, ($eb_name:ident, $eb:expr), ($ca_name: ident, $ca:expr), ($ia_name:ident, $ia:expr), $qb:expr, $block_size:expr) => {
+        (($lossless_name:ident, $lossless:expr), ($openmp:expr, $openmp_cfg:meta), ($eb_name:ident, $eb:expr), ($ca_name: ident, $ca:expr), ($ia_name:ident, $ia:expr), $qb:expr, $block_size:expr) => {
             paste::paste! {
+                #[$openmp_cfg]
                 #[test]
                 fn [<test_ $lossless_name _ $openmp _ $eb_name _ $ca_name _ $ia_name _ $qb _ $block_size>]() -> Result<()> {
                     let data = test_data::<f32>();
@@ -944,12 +946,13 @@ mod tests {
                         .remainder_dim()?;
                     let config = Config::new($eb)
                         .lossless($lossless)
-                        .openmp($openmp)
                         .error_bound($eb)
                         .compression_algorithm($ca)
                         .interpolation_algorithm($ia)
                         .quantization_bincount($qb)
                         .block_size($block_size);
+                    #[cfg(feature = "openmp")]
+                    let config = config.openmp($openmp);
 
                     check_error_bound(&data, &config, $eb)?;
 
@@ -961,7 +964,7 @@ mod tests {
 
     foreach_combination!(
         ([(lossless_bypass, LossLess::LossLessBypass), (zstd, LossLess::ZSTD)],
-        ([true, false],
+        ([(true, cfg(feature = "openmp")), (false, cfg(all()))],
         ([
             (absolute_1_0, ErrorBound::Absolute(1.)),
             (absolute_0_1, ErrorBound::Absolute(0.1)),
