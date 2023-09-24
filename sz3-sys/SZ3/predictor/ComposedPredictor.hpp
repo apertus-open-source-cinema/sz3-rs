@@ -98,8 +98,8 @@ namespace SZ {
             // TODO: check correctness
             size_t selection_size = *reinterpret_cast<const size_t *>(c);
             c += sizeof(size_t);
-            remaining_length -= sizeof(size_t);
             if (selection_size > 0) {
+                remaining_length -= sizeof(size_t);
                 HuffmanEncoder<int> selection_encoder;
                 selection_encoder.load(c, remaining_length);
                 this->selection = selection_encoder.decode(c, selection_size);

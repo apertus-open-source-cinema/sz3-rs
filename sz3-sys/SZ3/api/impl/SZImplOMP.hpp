@@ -6,7 +6,7 @@
 #include <memory>
 
 #ifdef _OPENMP
-#include "omp.h"
+#include <omp.h>
 #endif
 
 template<class T, SZ::uint N>
@@ -21,7 +21,7 @@ char *SZ_compress_OMP(SZ::Config &conf, const T *data, size_t &outSize) {
     std::vector<size_t> cmp_size_t, cmp_start_t;
     std::vector<T> min_t, max_t;
     std::vector<SZ::Config> conf_t;
-    SZ::Timer timer(true);
+//    SZ::Timer timer(true);
     int nThreads = 1;
     double eb;
 #pragma omp parallel
@@ -32,7 +32,7 @@ char *SZ_compress_OMP(SZ::Config &conf, const T *data, size_t &outSize) {
             if (conf.dims[0] < nThreads) {
                 nThreads = conf.dims[0];
             }
-            // printf("OpenMP threads = %d\n", nThreads);
+	    //printf("OpenMP threads = %d\n", nThreads);
             compressed_t.resize(nThreads);
             cmp_size_t.resize(nThreads + 1);
             cmp_start_t.resize(nThreads + 1);
@@ -63,8 +63,8 @@ char *SZ_compress_OMP(SZ::Config &conf, const T *data, size_t &outSize) {
             {
                 T range = *std::max_element(max_t.begin(), max_t.end()) - *std::min_element(min_t.begin(), min_t.end());
                 SZ::calAbsErrorBound<T>(conf, data, range);
-                timer.stop("OMP init");
-                timer.start();
+//                timer.stop("OMP init");
+//                timer.start();
             }
         }
 
@@ -111,7 +111,7 @@ void SZ_decompress_OMP(const SZ::Config &conf, char *cmpData, size_t cmpSize, T 
     int nThreads = 1;
     SZ::read(nThreads, cmpr_data_pos);
     omp_set_num_threads(nThreads);
-    // printf("OpenMP threads = %d\n", nThreads);
+//    printf("OpenMP threads = %d\n", nThreads);
 
     std::vector<SZ::Config> conf_t(nThreads);
     for (int i = 0; i < nThreads; i++) {

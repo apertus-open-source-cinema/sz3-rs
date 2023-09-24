@@ -101,6 +101,10 @@ namespace SZ {
          */
         void preprocess_encode(const T *bins, size_t num_bin, int stateNum) {
             nodeCount = 0;
+            if (num_bin == 0) {
+                printf("Huffman bins should not be empty\n");
+                exit(0);
+            }
             init(bins, num_bin);
             for (int i = 0; i < huffmanTree->stateNum; i++)
                 if (huffmanTree->code[i]) nodeCount++;
@@ -108,7 +112,7 @@ namespace SZ {
         }
 
         //save the huffman Tree in the compressed data
-        uint save(uchar *&c) {
+        void save(uchar *&c) {
             auto cc = c;
             write(offset, c);
             int32ToBytes_bigEndian(c, nodeCount);
@@ -124,13 +128,12 @@ namespace SZ {
             else
                 totalSize = convert_HuffTree_to_bytes_anyStates<unsigned int>(nodeCount, c);
             c += totalSize;
-            return c - cc;
+//            return c - cc;
         }
 
         size_t size_est() {
             size_t b = (nodeCount <= 256) ? sizeof(unsigned char) : ((nodeCount <= 65536) ? sizeof(unsigned short) : sizeof(unsigned int));
-            /* printf("[%ld] encodedSize = %ld\n", omp_get_thread_num(), encodedSize); */
-            return 1 + 2 * nodeCount * b + nodeCount * sizeof(unsigned char) + nodeCount * sizeof(T) + sizeof(int) + sizeof(int) + sizeof(T) + encodedSize;
+            return 1 + 2 * nodeCount * b + nodeCount * sizeof(unsigned char) + nodeCount * sizeof(T) + sizeof(int) + sizeof(int) + sizeof(T);
         }
 
         //perform encoding
@@ -216,7 +219,6 @@ namespace SZ {
             }
             *reinterpret_cast<size_t *>(bytes) = outSize;
             bytes += sizeof(size_t) + outSize;
-            /* printf("[%ld] outSize = %ld\n", omp_get_thread_num(), outSize); */
             return outSize;
         }
 
@@ -293,11 +295,10 @@ namespace SZ {
     private:
         HuffmanTree *huffmanTree = NULL;
         node treeRoot;
-        unsigned int nodeCount;
+        unsigned int nodeCount = 0;
         uchar sysEndianType; //0: little endian, 1: big endian
         bool loaded = false;
         T offset;
-        size_t encodedSize;
 
 
         node reconstruct_HuffTree_from_bytes_anyStates(const unsigned char *bytes, uint nodeCount) {
@@ -521,9 +522,6 @@ namespace SZ {
          * @param size_t length (input)
          * */
         void init(const T *s, size_t length) {
-            if (length == 0) {
-                return;
-            }
             T max = s[0];
             offset = s[0]; //offset is min
 
@@ -555,13 +553,6 @@ namespace SZ {
             build_code(huffmanTree->qq[1], 0, 0, 0);
             treeRoot = huffmanTree->qq[1];
 
-            size_t numBits = 0;
-            for (const auto &kv: frequency) {
-                auto value = kv.first;
-                auto freq = kv.second;
-                numBits += huffmanTree->cout[value - offset] * freq;
-            }
-            encodedSize = (numBits + 7) / 8;
         }
 
         template<class T1>

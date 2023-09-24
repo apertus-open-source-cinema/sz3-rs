@@ -142,7 +142,7 @@ namespace SZ {
                 encoder.load(c, remaining_length);
                 regression_coeff_quant_inds = encoder.decode(c, coeff_size);
                 encoder.postprocess_decode();
-                // remaining_length -= coeff_size * sizeof(int);
+                remaining_length -= coeff_size * sizeof(int);
                 std::fill(current_coeffs.begin(), current_coeffs.end(), 0);
                 regression_coeff_index = 0;
             }
