@@ -135,7 +135,7 @@ namespace SZ {
         }
 
         size_t size_est() {
-            return unpred.size() * sizeof(T) + sizeof(uint8_t) + sizeof(double) + sizeof(int) + sizeof(size_t);
+            return unpred.size() * sizeof(T);
         }
 
         void save(unsigned char *&c) const {
