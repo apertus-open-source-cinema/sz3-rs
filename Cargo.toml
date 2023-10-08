@@ -1,13 +1,13 @@
 [package]
 name = "sz3"
-version = "0.1.0+3.1.5.3"
+version = "0.1.0+3.1.8"
 edition = "2021"
 
 [features]
 openmp = ["sz3-sys/openmp"]
 
 [dependencies]
-sz3-sys = { path = "sz3-sys", version = "0.1.0+SZ3-3.1.5.3" }
+sz3-sys = { path = "sz3-sys", version = "0.1.0+SZ3-3.1.8" }
 thiserror = "1.0.31"
 
 [dev-dependencies]

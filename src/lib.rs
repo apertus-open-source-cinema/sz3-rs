@@ -16,15 +16,15 @@ pub enum CompressionAlgorithm {
 }
 
 impl CompressionAlgorithm {
-    fn decode(config: sz3_sys::SZ_Config) -> Self {
+    fn decode(config: sz3_sys::SZ3_Config) -> Self {
         match config.cmprAlgo as _ {
-            sz3_sys::SZ_ALGO_ALGO_INTERP => Self::Interpolation {
+            sz3_sys::SZ3_ALGO_ALGO_INTERP => Self::Interpolation {
                 interp_block_size: config.interpBlockSize as _,
             },
-            sz3_sys::SZ_ALGO_ALGO_INTERP_LORENZO => Self::InterpolationLorenzo {
+            sz3_sys::SZ3_ALGO_ALGO_INTERP_LORENZO => Self::InterpolationLorenzo {
                 interp_block_size: config.interpBlockSize as _,
             },
-            sz3_sys::SZ_ALGO_ALGO_LORENZO_REG => Self::LorenzoRegression {
+            sz3_sys::SZ3_ALGO_ALGO_LORENZO_REG => Self::LorenzoRegression {
                 lorenzo: config.lorenzo,
                 lorenzo_second_order: config.lorenzo2,
                 regression: config.regression,
@@ -37,9 +37,9 @@ impl CompressionAlgorithm {
 
     fn code(&self) -> u8 {
         (match self {
-            Self::Interpolation { .. } => sz3_sys::SZ_ALGO_ALGO_INTERP,
-            Self::InterpolationLorenzo { .. } => sz3_sys::SZ_ALGO_ALGO_INTERP_LORENZO,
-            Self::LorenzoRegression { .. } => sz3_sys::SZ_ALGO_ALGO_LORENZO_REG,
+            Self::Interpolation { .. } => sz3_sys::SZ3_ALGO_ALGO_INTERP,
+            Self::InterpolationLorenzo { .. } => sz3_sys::SZ3_ALGO_ALGO_INTERP_LORENZO,
+            Self::LorenzoRegression { .. } => sz3_sys::SZ3_ALGO_ALGO_LORENZO_REG,
         }) as _
     }
 
@@ -177,17 +177,17 @@ pub enum ErrorBound {
 }
 
 impl ErrorBound {
-    fn decode(config: sz3_sys::SZ_Config) -> Self {
+    fn decode(config: sz3_sys::SZ3_Config) -> Self {
         match config.errorBoundMode as _ {
-            sz3_sys::SZ_EB_EB_ABS => Self::Absolute(config.absErrorBound),
-            sz3_sys::SZ_EB_EB_REL => Self::Relative(config.relErrorBound),
-            sz3_sys::SZ_EB_EB_PSNR => Self::PSNR(config.psnrErrorBound),
-            sz3_sys::SZ_EB_EB_L2NORM => Self::L2Norm(config.l2normErrorBound),
-            sz3_sys::SZ_EB_EB_ABS_OR_REL => Self::AbsoluteOrRelative {
+            sz3_sys::SZ3_EB_EB_ABS => Self::Absolute(config.absErrorBound),
+            sz3_sys::SZ3_EB_EB_REL => Self::Relative(config.relErrorBound),
+            sz3_sys::SZ3_EB_EB_PSNR => Self::PSNR(config.psnrErrorBound),
+            sz3_sys::SZ3_EB_EB_L2NORM => Self::L2Norm(config.l2normErrorBound),
+            sz3_sys::SZ3_EB_EB_ABS_OR_REL => Self::AbsoluteOrRelative {
                 absolute_bound: config.absErrorBound,
                 relative_bound: config.relErrorBound,
             },
-            sz3_sys::SZ_EB_EB_ABS_AND_REL => Self::AbsoluteAndRelative {
+            sz3_sys::SZ3_EB_EB_ABS_AND_REL => Self::AbsoluteAndRelative {
                 absolute_bound: config.absErrorBound,
                 relative_bound: config.relErrorBound,
             },
@@ -197,12 +197,12 @@ impl ErrorBound {
 
     fn code(&self) -> u8 {
         (match self {
-            Self::Absolute(_) => sz3_sys::SZ_EB_EB_ABS,
-            Self::Relative(_) => sz3_sys::SZ_EB_EB_REL,
-            Self::PSNR(_) => sz3_sys::SZ_EB_EB_PSNR,
-            Self::L2Norm(_) => sz3_sys::SZ_EB_EB_L2NORM,
-            Self::AbsoluteAndRelative { .. } => sz3_sys::SZ_EB_EB_ABS_AND_REL,
-            Self::AbsoluteOrRelative { .. } => sz3_sys::SZ_EB_EB_ABS_OR_REL,
+            Self::Absolute(_) => sz3_sys::SZ3_EB_EB_ABS,
+            Self::Relative(_) => sz3_sys::SZ3_EB_EB_REL,
+            Self::PSNR(_) => sz3_sys::SZ3_EB_EB_PSNR,
+            Self::L2Norm(_) => sz3_sys::SZ3_EB_EB_L2NORM,
+            Self::AbsoluteAndRelative { .. } => sz3_sys::SZ3_EB_EB_ABS_AND_REL,
+            Self::AbsoluteOrRelative { .. } => sz3_sys::SZ3_EB_EB_ABS_OR_REL,
         }) as _
     }
 
@@ -239,43 +239,39 @@ impl ErrorBound {
     }
 }
 
-#[derive(Clone, Debug, Copy)]
+#[derive(Clone, Debug, Copy, Default)]
 pub enum InterpolationAlgorithm {
     Linear,
+    #[default]
     Cubic,
 }
 
 impl InterpolationAlgorithm {
-    fn decode(config: sz3_sys::SZ_Config) -> Self {
+    fn decode(config: sz3_sys::SZ3_Config) -> Self {
         match config.interpAlgo as _ {
-            sz3_sys::SZ_INTERP_ALGO_INTERP_ALGO_LINEAR => Self::Linear,
-            sz3_sys::SZ_INTERP_ALGO_INTERP_ALGO_CUBIC => Self::Cubic,
+            sz3_sys::SZ3_INTERP_ALGO_INTERP_ALGO_LINEAR => Self::Linear,
+            sz3_sys::SZ3_INTERP_ALGO_INTERP_ALGO_CUBIC => Self::Cubic,
             _ => unreachable!(),
         }
     }
 
     fn code(&self) -> u8 {
         (match self {
-            Self::Linear => sz3_sys::SZ_INTERP_ALGO_INTERP_ALGO_LINEAR,
-            Self::Cubic => sz3_sys::SZ_INTERP_ALGO_INTERP_ALGO_CUBIC,
+            Self::Linear => sz3_sys::SZ3_INTERP_ALGO_INTERP_ALGO_LINEAR,
+            Self::Cubic => sz3_sys::SZ3_INTERP_ALGO_INTERP_ALGO_CUBIC,
         }) as _
     }
 }
 
-impl Default for InterpolationAlgorithm {
-    fn default() -> Self {
-        InterpolationAlgorithm::Cubic
-    }
-}
-
-#[derive(Clone, Debug, Copy)]
+#[derive(Clone, Debug, Copy, Default)]
 pub enum LossLess {
     LossLessBypass,
+    #[default]
     ZSTD,
 }
 
 impl LossLess {
-    fn decode(config: sz3_sys::SZ_Config) -> Self {
+    fn decode(config: sz3_sys::SZ3_Config) -> Self {
         match config.lossless {
             0 => LossLess::LossLessBypass,
             1 => LossLess::ZSTD,
@@ -291,21 +287,16 @@ impl LossLess {
     }
 }
 
-impl Default for LossLess {
-    fn default() -> Self {
-        LossLess::ZSTD
-    }
-}
-
-#[derive(Clone, Debug, Copy)]
+#[derive(Clone, Debug, Copy, Default)]
 pub enum Encoder {
     SkipEncoder,
+    #[default]
     HuffmanEncoder,
     ArithmeticEncoder,
 }
 
 impl Encoder {
-    fn decode(config: sz3_sys::SZ_Config) -> Self {
+    fn decode(config: sz3_sys::SZ3_Config) -> Self {
         match config.encoder {
             0 => Self::SkipEncoder,
             1 => Self::HuffmanEncoder,
@@ -320,12 +311,6 @@ impl Encoder {
             Self::HuffmanEncoder => 1,
             Self::ArithmeticEncoder => 2,
         }
-    }
-}
-
-impl Default for Encoder {
-    fn default() -> Self {
-        Encoder::HuffmanEncoder
     }
 }
 
@@ -365,8 +350,8 @@ where
 
     fn deref(&self) -> &Self::Target {
         match self {
-            Self::Owned(owned) => &**owned,
-            Self::Borrowed(borrowed) => *borrowed,
+            Self::Owned(owned) => owned,
+            Self::Borrowed(borrowed) => borrowed,
         }
     }
 }
@@ -380,89 +365,97 @@ impl SZ3Compressible for i64 {}
 mod private {
     pub trait Sealed {
         unsafe fn compress(
-            config: sz3_sys::SZ_Config,
+            config: sz3_sys::SZ3_Config,
             data: *const Self,
-            len: *mut sz3_sys::size_t,
+            len: *mut usize,
         ) -> *mut i8;
         unsafe fn decompress(
             compressed_data: *const i8,
-            compressed_len: sz3_sys::size_t,
+            compressed_len: usize,
             uncompressed: *mut *mut Self,
-        ) -> sz3_sys::SZ_Config;
+        ) -> sz3_sys::SZ3_Config;
         unsafe fn dealloc(data: *mut Self);
     }
     impl Sealed for f32 {
         unsafe fn compress(
-            config: sz3_sys::SZ_Config,
+            config: sz3_sys::SZ3_Config,
             data: *const Self,
-            len: *mut sz3_sys::size_t,
+            len: *mut usize,
         ) -> *mut i8 {
             sz3_sys::compress_float(config, data, len) as _
         }
+
         unsafe fn decompress(
             compressed_data: *const i8,
-            compressed_len: sz3_sys::size_t,
+            compressed_len: usize,
             uncompressed: *mut *mut Self,
-        ) -> sz3_sys::SZ_Config {
+        ) -> sz3_sys::SZ3_Config {
             sz3_sys::decompress_float(compressed_data as _, compressed_len, uncompressed)
         }
+
         unsafe fn dealloc(data: *mut Self) {
             sz3_sys::dealloc_result_float(data)
         }
     }
     impl Sealed for f64 {
         unsafe fn compress(
-            config: sz3_sys::SZ_Config,
+            config: sz3_sys::SZ3_Config,
             data: *const Self,
-            len: *mut sz3_sys::size_t,
+            len: *mut usize,
         ) -> *mut i8 {
             sz3_sys::compress_double(config, data, len) as _
         }
+
         unsafe fn decompress(
             compressed_data: *const i8,
-            compressed_len: sz3_sys::size_t,
+            compressed_len: usize,
             uncompressed: *mut *mut Self,
-        ) -> sz3_sys::SZ_Config {
+        ) -> sz3_sys::SZ3_Config {
             sz3_sys::decompress_double(compressed_data as _, compressed_len, uncompressed)
         }
+
         unsafe fn dealloc(data: *mut Self) {
             sz3_sys::dealloc_result_double(data)
         }
     }
     impl Sealed for i32 {
         unsafe fn compress(
-            config: sz3_sys::SZ_Config,
+            config: sz3_sys::SZ3_Config,
             data: *const Self,
-            len: *mut sz3_sys::size_t,
+            len: *mut usize,
         ) -> *mut i8 {
             sz3_sys::compress_int32_t(config, data, len) as _
         }
+
         unsafe fn decompress(
             compressed_data: *const i8,
-            compressed_len: sz3_sys::size_t,
+            compressed_len: usize,
             uncompressed: *mut *mut Self,
-        ) -> sz3_sys::SZ_Config {
+        ) -> sz3_sys::SZ3_Config {
             sz3_sys::decompress_int32_t(compressed_data as _, compressed_len, uncompressed)
         }
+
         unsafe fn dealloc(data: *mut Self) {
             sz3_sys::dealloc_result_int32_t(data)
         }
     }
     impl Sealed for i64 {
         unsafe fn compress(
-            config: sz3_sys::SZ_Config,
+            config: sz3_sys::SZ3_Config,
             data: *const Self,
-            len: *mut sz3_sys::size_t,
+            len: *mut usize,
         ) -> *mut i8 {
             sz3_sys::compress_int64_t(config, data, len) as _
         }
+
         unsafe fn decompress(
             compressed_data: *const i8,
-            compressed_len: sz3_sys::size_t,
+            compressed_len: usize,
             uncompressed: *mut *mut Self,
-        ) -> sz3_sys::SZ_Config {
+        ) -> sz3_sys::SZ3_Config {
             sz3_sys::decompress_int64_t(compressed_data as _, compressed_len, uncompressed)
         }
+
         unsafe fn dealloc(data: *mut Self) {
             sz3_sys::dealloc_result_int64_t(data)
         }
@@ -472,18 +465,18 @@ mod private {
 #[derive(Clone, Debug)]
 pub struct DimensionedData<'a, V: SZ3Compressible> {
     data: OwnedOrBorrowed<'a, [V], SZ3DecompressionResult<V>>,
-    dims: Vec<sz3_sys::size_t>,
+    dims: Vec<usize>,
 }
 
 #[derive(Clone, Debug)]
 pub struct DimensionedDataBuilder<'a, V> {
     data: &'a [V],
-    dims: Vec<sz3_sys::size_t>,
+    dims: Vec<usize>,
     remainder: usize,
 }
 
 impl<V: SZ3Compressible> DimensionedData<'static, V> {
-    fn from_raw(config: sz3_sys::SZ_Config, data: SZ3DecompressionResult<V>) -> Self {
+    fn from_raw(config: sz3_sys::SZ3_Config, data: SZ3DecompressionResult<V>) -> Self {
         let dims = (0..config.N)
             .map(|i| unsafe { std::ptr::read(config.dims.add(i as _)) })
             .collect();
@@ -497,18 +490,18 @@ impl<V: SZ3Compressible> DimensionedData<'static, V> {
 impl<'a, V: SZ3Compressible> DimensionedData<'a, V> {
     pub fn build<T: std::ops::Deref<Target = [V]>>(data: &'a T) -> DimensionedDataBuilder<'a, V> {
         DimensionedDataBuilder {
-            data: &*data,
+            data,
             dims: vec![],
             remainder: data.len(),
         }
     }
 
     pub fn data(&self) -> &[V] {
-        &*self.data
+        &self.data
     }
 
-    pub fn num_dims(&self) -> usize {
-        self.dims.len()
+    pub fn dims(&self) -> &[usize] {
+        &self.dims
     }
 
     fn len(&self) -> usize {
@@ -522,24 +515,34 @@ impl<'a, V: SZ3Compressible> DimensionedData<'a, V> {
 
 #[derive(thiserror::Error, Debug)]
 pub enum SZ3Error {
-    #[error("invalid dimension specification for data of length {len}: already specified dimensions {dims:?}, and wanted to add dimension with length {wanted}, but this does not divide {remainder} cleanly")]
+    #[error(
+        "invalid dimension specification for data of length {len}: already specified dimensions \
+         {dims:?}, and wanted to add dimension with length {wanted}, but this does not divide \
+         {remainder} cleanly"
+    )]
     InvalidDimensionSize {
-        dims: Vec<sz3_sys::size_t>,
+        dims: Vec<usize>,
         len: usize,
         wanted: usize,
         remainder: usize,
     },
     #[error("dimension with size one has no use")]
     OneSizedDimension,
-    #[error("dimension specification {dims:?} for data of length {len} does not cover whole space, missing a dimension of {remainder}")]
+    #[error(
+        "dimension specification {dims:?} for data of length {len} does not cover whole space, \
+         missing a dimension of {remainder}"
+    )]
     UnderSpecifiedDimensions {
-        dims: Vec<sz3_sys::size_t>,
+        dims: Vec<usize>,
         len: usize,
         remainder: usize,
     },
     #[error("prediction dimension cannot be zero (it is one based)")]
     PredictionDimensionZero,
-    #[error("wanted to predict along dimension {prediction_dimension}, but data only has {data_dimensions} dimensions")]
+    #[error(
+        "wanted to predict along dimension {prediction_dimension}, but data only has \
+         {data_dimensions} dimensions"
+    )]
     PredictionDimensionDataDimensionsMismatch {
         prediction_dimension: u32,
         data_dimensions: u32,
@@ -551,7 +554,12 @@ type Result<T> = std::result::Result<T, SZ3Error>;
 impl<'a, V: SZ3Compressible> DimensionedDataBuilder<'a, V> {
     pub fn dim(mut self, length: usize) -> Result<Self> {
         if length == 1 {
-            Err(SZ3Error::OneSizedDimension)
+            if self.dims.is_empty() && self.remainder == 1 {
+                self.dims.push(1);
+                Ok(self)
+            } else {
+                Err(SZ3Error::OneSizedDimension)
+            }
         } else if self.remainder.rem_euclid(length) != 0 {
             Err(SZ3Error::InvalidDimensionSize {
                 dims: self.dims,
@@ -588,7 +596,7 @@ impl<'a, V: SZ3Compressible> DimensionedDataBuilder<'a, V> {
 }
 
 impl Config {
-    fn from_decompressed(config: sz3_sys::SZ_Config) -> Self {
+    fn from_decompressed(config: sz3_sys::SZ3_Config) -> Self {
         Self {
             compression_algorithm: CompressionAlgorithm::decode(config),
             error_bound: ErrorBound::decode(config),
@@ -699,7 +707,7 @@ pub fn compress_with_config<V: SZ3Compressible>(
     config: &Config,
 ) -> Result<SZ3CompressionResult> {
     if let Some(prediction_dimension) = config.compression_algorithm.prediction_dimension() {
-        let data_dimensions = data.num_dims() as u32;
+        let data_dimensions = data.dims().len() as u32;
         if prediction_dimension == 0 {
             return Err(SZ3Error::PredictionDimensionZero);
         } else if prediction_dimension > data_dimensions {
@@ -710,14 +718,14 @@ pub fn compress_with_config<V: SZ3Compressible>(
         }
     }
 
-    let block_size = config.block_size.unwrap_or(match data.num_dims() {
+    let block_size = config.block_size.unwrap_or(match data.dims().len() {
         1 => 128,
         2 => 16,
         _ => 6,
     });
 
-    let raw_config = sz3_sys::SZ_Config {
-        N: data.num_dims() as _,
+    let raw_config = sz3_sys::SZ3_Config {
+        N: data.dims().len() as _,
         dims: data.dims.as_ptr() as _,
         num: data.len() as _,
         errorBoundMode: config.error_bound.code(),
@@ -733,7 +741,7 @@ pub fn compress_with_config<V: SZ3Compressible>(
         interpBlockSize: config.compression_algorithm.interp_block_size() as _,
         pred_dim: config
             .compression_algorithm
-            .encode_prediction_dimension(data.num_dims() as _) as _,
+            .encode_prediction_dimension(data.dims().len() as _) as _,
         openmp: config.openmp,
         lossless: config.lossless.code(),
         encoder: config.encoder.code(),
@@ -743,7 +751,7 @@ pub fn compress_with_config<V: SZ3Compressible>(
         stride: block_size as _,
     };
 
-    let mut len: sz3_sys::size_t = 0;
+    let mut len: usize = 0;
     let data = unsafe { V::compress(raw_config, data.as_ptr() as _, &mut len) };
 
     Ok(SZ3CompressionResult {
@@ -825,9 +833,9 @@ mod tests {
     where
         f64: From<T>,
     {
-        let config = config.clone().error_bound(error_bound.clone());
+        let config = config.clone().error_bound(error_bound);
         let (_decompressed_config, decompressed_data) =
-            decompress::<T, _>(&*compress_with_config(&data, &config)?);
+            decompress::<T, _>(&*compress_with_config(data, &config)?);
         let min = data
             .data()
             .iter()

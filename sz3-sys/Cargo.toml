@@ -1,6 +1,6 @@
 [package]
 name = "sz3-sys"
-version = "0.1.0+SZ3-3.1.5.3"
+version = "0.1.0+SZ3-3.1.8"
 edition = "2021"
 license = "GPL-3.0-only"
 
@@ -9,8 +9,9 @@ openmp = ["dep:openmp-sys"]
 
 [dependencies]
 openmp-sys = { version = "1.2.3", optional = true }
-zstd-sys = "2.0.1"
+zstd-sys = { version = "2.0.9", default-features = false }
 
 [build-dependencies]
-bindgen = "0.59.2"
+bindgen = "0.68.1"
 cc = "1.0.73"
+cmake = "0.1.50"
