@@ -1,0 +1,4 @@
+[submodule "sz3-sys/SZ3"]
+	path = sz3-sys/SZ3
+	url = https://github.com/szcompressor/SZ3.git
+	branch = sz3-rs

@@ -1,31 +1,31 @@
 #include "SZ3/api/sz.hpp"
 
-struct SZ_Config {
+struct SZ3_Config {
     char N;
     size_t * dims;
     size_t num;
-    uint8_t cmprAlgo = SZ::ALGO_INTERP_LORENZO;
-    uint8_t errorBoundMode = SZ::EB_ABS;
+    uint8_t cmprAlgo;
+    uint8_t errorBoundMode;
     double absErrorBound;
     double relErrorBound;
     double psnrErrorBound;
     double l2normErrorBound;
-    bool lorenzo = true;
-    bool lorenzo2 = false;
-    bool regression = true;
-    bool regression2 = true;
-    bool openmp = false;
-    uint8_t lossless = 1;
-    uint8_t encoder = 1;
-    uint8_t interpAlgo = SZ::INTERP_ALGO_CUBIC;
-    int interpBlockSize = 32;
-    int quantbinCnt = 65536;
+    bool lorenzo;
+    bool lorenzo2;
+    bool regression;
+    bool regression2;
+    bool openmp;
+    uint8_t lossless;
+    uint8_t encoder;
+    uint8_t interpAlgo;
+    int interpBlockSize;
+    int quantbinCnt;
     int blockSize;
     int stride;
     int pred_dim;
 
-    SZ::Config into() {
-        auto conf = SZ::Config{};
+    SZ3::Config into() {
+        auto conf = SZ3::Config{};
         conf.N = N;
         conf.dims = std::vector<size_t>(dims, dims + N);
         conf.num = num;
@@ -51,7 +51,7 @@ struct SZ_Config {
         return conf;
     }
 
-    SZ_Config(SZ::Config &conf) {
+    SZ3_Config(SZ3::Config &conf) {
         dims = new size_t[conf.N];
         std::copy(conf.dims.begin(), conf.dims.end(), dims);
         N = conf.N;
@@ -75,20 +75,19 @@ struct SZ_Config {
         blockSize = conf.blockSize;
         stride = conf.stride;
         pred_dim = conf.pred_dim;
-        pred_dim = conf.pred_dim;
     }
 };
 
 
 #define func(ty) \
-    char * compress_ ## ty(SZ_Config config, const ty * data, size_t &outSize) { \
+    char * compress_ ## ty(SZ3_Config config, const ty * data, size_t &outSize) { \
         return SZ_compress(config.into(), data, outSize); \
     } \
-    SZ_Config decompress_ ## ty(const char * compressedData, size_t compressedSize, ty *&decompressedData) { \
-        auto conf = SZ::Config{}; \
+    SZ3_Config decompress_ ## ty(const char * compressedData, size_t compressedSize, ty *&decompressedData) { \
+        auto conf = SZ3::Config{}; \
         auto d = std::vector<char>(compressedData, compressedData + compressedSize); \
         SZ_decompress(conf, d.data(), d.size(), decompressedData); \
-        return SZ_Config(conf); \
+        return SZ3_Config(conf); \
     } \
     void dealloc_result_ ## ty(ty * result) { \
         delete [] result; \
