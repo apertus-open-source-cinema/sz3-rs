@@ -1,19 +1,27 @@
 [package]
 name = "sz3"
-version = "0.1.0+3.1.8"
+version = "0.1.0+SZ3-3.1.8"
 edition = "2021"
+authors = ["Robin Ole Heinemann <robin.ole.heinemann@gmail.com>"]
+description = "High level bindings to the SZ3 lossy floating point compressor."
+repository = "https://github.com/apertus-open-source-cinema/sz3-rs/"
+license = "MIT OR Apache-2.0"
+keywords = ["compress"]
+categories = ["compression"]
+readme = "README.md"
+
 
 [features]
 openmp = ["sz3-sys/openmp"]
 
 [dependencies]
-sz3-sys = { path = "sz3-sys", version = "0.1.0+SZ3-3.1.8" }
-thiserror = "1.0.31"
+sz3-sys = { path = "sz3-sys", version = "0.1.0" }
+thiserror = "1.0.61"
 
 [dev-dependencies]
-bytemuck = "1.9.1"
+bytemuck = "1.16.0"
 align-data = "0.1.0"
-paste = "1.0.7"
+paste = "1.0.15"
 
 [profile.release]
 lto = "thin"

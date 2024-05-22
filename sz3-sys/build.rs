@@ -48,6 +48,7 @@ fn main() {
     println!("cargo:rerun-if-changed=wrapper.hpp");
     println!("cargo:rerun-if-changed=SZ3");
 
+    let cargo_callbacks = bindgen::CargoCallbacks::new();
     let bindings = bindgen::Builder::default()
         .clang_arg("-x")
         .clang_arg("c++")
@@ -55,7 +56,7 @@ fn main() {
         .clang_arg(format!("-I{}", sz3_root.join("include").display()))
         .clang_arg(format!("-I{}", zstd_root.join("include").display()))
         .header("wrapper.hpp")
-        .parse_callbacks(Box::new(bindgen::CargoCallbacks))
+        .parse_callbacks(Box::new(cargo_callbacks))
         .parse_callbacks(Box::new(ignored_macros))
         .allowlist_type("SZ3_Config")
         .allowlist_type("SZ3::EB")
