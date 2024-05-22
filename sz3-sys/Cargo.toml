@@ -3,15 +3,21 @@ name = "sz3-sys"
 version = "0.1.0+SZ3-3.1.8"
 edition = "2021"
 license = "GPL-3.0-only"
+authors = ["Robin Ole Heinemann <robin.ole.heinemann@gmail.com>"]
+description = "Low level bindigs to SZ3."
+repository = "https://github.com/apertus-open-source-cinema/sz3-rs/"
+keywords = ["compress"]
+categories = ["compression"]
+readme = "README.md"
 
 [features]
 openmp = ["dep:openmp-sys"]
 
 [dependencies]
 openmp-sys = { version = "1.2.3", optional = true }
-zstd-sys = { version = "2.0.9", default-features = false }
+zstd-sys = { version = "2.0.10", default-features = false }
 
 [build-dependencies]
-bindgen = "0.68.1"
-cc = "1.0.73"
+bindgen = "0.69.4"
+cc = "1.0.98"
 cmake = "0.1.50"
