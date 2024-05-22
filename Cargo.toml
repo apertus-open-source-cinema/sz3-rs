@@ -9,6 +9,7 @@ license = "MIT OR Apache-2.0"
 keywords = ["compress"]
 categories = ["compression"]
 readme = "README.md"
+exclude = ["test_data/*"]
 
 
 [features]
