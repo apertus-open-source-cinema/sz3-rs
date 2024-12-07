@@ -13,6 +13,7 @@ pub enum CompressionAlgorithm {
         regression_second_order: bool,
         prediction_dimension: Option<u32>,
     },
+    NoPrediction,
 }
 
 impl CompressionAlgorithm {
@@ -31,6 +32,7 @@ impl CompressionAlgorithm {
                 regression_second_order: config.regression2,
                 prediction_dimension: Some(config.pred_dim as _),
             },
+            sz3_sys::SZ3_ALGO_ALGO_NOPRED => Self::NoPrediction,
             _ => unreachable!(),
         }
     }
@@ -40,6 +42,7 @@ impl CompressionAlgorithm {
             Self::Interpolation { .. } => sz3_sys::SZ3_ALGO_ALGO_INTERP,
             Self::InterpolationLorenzo { .. } => sz3_sys::SZ3_ALGO_ALGO_INTERP_LORENZO,
             Self::LorenzoRegression { .. } => sz3_sys::SZ3_ALGO_ALGO_LORENZO_REG,
+            Self::NoPrediction => sz3_sys::SZ3_ALGO_ALGO_NOPRED,
         }) as _
     }
 
@@ -1007,7 +1010,8 @@ mod tests {
                 Some(true),
                 Some(true),
                 None
-            ))
+            )),
+            (no_prediction, CompressionAlgorithm::NoPrediction)
         ],
         ([(linear, InterpolationAlgorithm::Linear), (cubic, InterpolationAlgorithm::Cubic)],
         ([65536, 256, 2097152],
