@@ -1,11 +1,7 @@
 #[derive(Clone, Debug, Copy)]
 pub enum CompressionAlgorithm {
-    Interpolation {
-        interp_block_size: u32,
-    },
-    InterpolationLorenzo {
-        interp_block_size: u32,
-    },
+    Interpolation,
+    InterpolationLorenzo,
     LorenzoRegression {
         lorenzo: bool,
         lorenzo_second_order: bool,
@@ -18,12 +14,8 @@ pub enum CompressionAlgorithm {
 impl CompressionAlgorithm {
     fn decode(config: sz3_sys::SZ3_Config) -> Self {
         match config.cmprAlgo as _ {
-            sz3_sys::SZ3_ALGO_ALGO_INTERP => Self::Interpolation {
-                interp_block_size: config.interpBlockSize as _,
-            },
-            sz3_sys::SZ3_ALGO_ALGO_INTERP_LORENZO => Self::InterpolationLorenzo {
-                interp_block_size: config.interpBlockSize as _,
-            },
+            sz3_sys::SZ3_ALGO_ALGO_INTERP => Self::Interpolation,
+            sz3_sys::SZ3_ALGO_ALGO_INTERP_LORENZO => Self::InterpolationLorenzo,
             sz3_sys::SZ3_ALGO_ALGO_LORENZO_REG => Self::LorenzoRegression {
                 lorenzo: config.lorenzo,
                 lorenzo_second_order: config.lorenzo2,
@@ -41,14 +33,6 @@ impl CompressionAlgorithm {
             Self::InterpolationLorenzo { .. } => sz3_sys::SZ3_ALGO_ALGO_INTERP_LORENZO,
             Self::LorenzoRegression { .. } => sz3_sys::SZ3_ALGO_ALGO_LORENZO_REG,
         }) as _
-    }
-
-    fn interp_block_size(&self) -> u32 {
-        match self {
-            Self::Interpolation { interp_block_size }
-            | Self::InterpolationLorenzo { interp_block_size } => *interp_block_size,
-            _ => 32,
-        }
     }
 
     fn lorenzo(&self) -> bool {
@@ -97,26 +81,6 @@ impl CompressionAlgorithm {
         }
     }
 
-    pub fn interpolation() -> Self {
-        Self::Interpolation {
-            interp_block_size: 32,
-        }
-    }
-
-    pub fn interpolation_custom(interp_block_size: u32) -> Self {
-        Self::Interpolation { interp_block_size }
-    }
-
-    pub fn interpolation_lorenzo() -> Self {
-        Self::InterpolationLorenzo {
-            interp_block_size: 32,
-        }
-    }
-
-    pub fn interpolation_lorenzo_custom(interp_block_size: u32) -> Self {
-        Self::InterpolationLorenzo { interp_block_size }
-    }
-
     pub fn lorenzo_regression() -> Self {
         Self::LorenzoRegression {
             lorenzo: true,
@@ -156,7 +120,7 @@ impl CompressionAlgorithm {
 
 impl Default for CompressionAlgorithm {
     fn default() -> Self {
-        CompressionAlgorithm::interpolation_lorenzo()
+        CompressionAlgorithm::InterpolationLorenzo
     }
 }
 
@@ -738,7 +702,6 @@ pub fn compress_with_config<V: SZ3Compressible>(
         lorenzo2: config.compression_algorithm.lorenzo_second_order(),
         regression: config.compression_algorithm.regression(),
         regression2: config.compression_algorithm.regression_second_order(),
-        interpBlockSize: config.compression_algorithm.interp_block_size() as _,
         pred_dim: config
             .compression_algorithm
             .encode_prediction_dimension(data.dims().len() as _) as _,
@@ -996,10 +959,8 @@ mod tests {
             })
         ],
         ([
-            (interpolation, CompressionAlgorithm::interpolation()),
-            (interpolation_8, CompressionAlgorithm::interpolation_custom(8)),
-            (interpolation_lorenzo, CompressionAlgorithm::interpolation_lorenzo()),
-            (interpolation_lorenzo_8, CompressionAlgorithm::interpolation_lorenzo_custom(8)),
+            (interpolation, CompressionAlgorithm::Interpolation),
+            (interpolation_lorenzo, CompressionAlgorithm::InterpolationLorenzo),
             (lorenzo_reg, CompressionAlgorithm::lorenzo_regression()),
             (lorenzo_reg_all, CompressionAlgorithm::lorenzo_regression_custom(
                 Some(true),
