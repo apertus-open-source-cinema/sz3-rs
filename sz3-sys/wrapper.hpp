@@ -18,7 +18,6 @@ struct SZ3_Config {
     uint8_t lossless;
     uint8_t encoder;
     uint8_t interpAlgo;
-    int interpBlockSize;
     int quantbinCnt;
     int blockSize;
     int stride;
@@ -43,7 +42,6 @@ struct SZ3_Config {
         conf.lossless = lossless;
         conf.encoder = encoder;
         conf.interpAlgo = interpAlgo;
-        conf.interpBlockSize = interpBlockSize;
         conf.quantbinCnt = quantbinCnt;
         conf.blockSize = blockSize;
         conf.stride = stride;
@@ -70,7 +68,6 @@ struct SZ3_Config {
         lossless = conf.lossless;
         encoder = conf.encoder;
         interpAlgo = conf.interpAlgo;
-        interpBlockSize = conf.interpBlockSize;
         quantbinCnt = conf.quantbinCnt;
         blockSize = conf.blockSize;
         stride = conf.stride;
