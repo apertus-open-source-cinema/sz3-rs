@@ -9,6 +9,8 @@ pub enum CompressionAlgorithm {
         regression_second_order: bool,
         prediction_dimension: Option<u32>,
     },
+    NoPrediction,
+    Lossless,
 }
 
 impl CompressionAlgorithm {
@@ -23,7 +25,9 @@ impl CompressionAlgorithm {
                 regression_second_order: config.regression2,
                 prediction_dimension: Some(config.pred_dim as _),
             },
-            _ => unreachable!(),
+            sz3_sys::SZ3_ALGO_ALGO_NOPRED => Self::NoPrediction,
+            sz3_sys::SZ3_ALGO_ALGO_LOSSLESS => Self::Lossless,
+            algo => panic!("unsupported compression algorithm {}", algo),
         }
     }
 
@@ -32,6 +36,8 @@ impl CompressionAlgorithm {
             Self::Interpolation { .. } => sz3_sys::SZ3_ALGO_ALGO_INTERP,
             Self::InterpolationLorenzo { .. } => sz3_sys::SZ3_ALGO_ALGO_INTERP_LORENZO,
             Self::LorenzoRegression { .. } => sz3_sys::SZ3_ALGO_ALGO_LORENZO_REG,
+            Self::NoPrediction => sz3_sys::SZ3_ALGO_ALGO_NOPRED,
+            Self::Lossless => sz3_sys::SZ3_ALGO_ALGO_LOSSLESS,
         }) as _
     }
 
@@ -155,7 +161,7 @@ impl ErrorBound {
                 absolute_bound: config.absErrorBound,
                 relative_bound: config.relErrorBound,
             },
-            _ => unreachable!(),
+            mode => panic!("unsupported error bound {}", mode),
         }
     }
 
@@ -215,7 +221,7 @@ impl InterpolationAlgorithm {
         match config.interpAlgo as _ {
             sz3_sys::SZ3_INTERP_ALGO_INTERP_ALGO_LINEAR => Self::Linear,
             sz3_sys::SZ3_INTERP_ALGO_INTERP_ALGO_CUBIC => Self::Cubic,
-            _ => unreachable!(),
+            algo => panic!("unsupported interpolation algorithm {}", algo),
         }
     }
 
@@ -239,7 +245,7 @@ impl LossLess {
         match config.lossless {
             0 => LossLess::LossLessBypass,
             1 => LossLess::ZSTD,
-            _ => unreachable!(),
+            mode => panic!("unsupported lossless mode {}", mode),
         }
     }
 
@@ -265,7 +271,7 @@ impl Encoder {
             0 => Self::SkipEncoder,
             1 => Self::HuffmanEncoder,
             2 => Self::ArithmeticEncoder,
-            _ => unreachable!(),
+            encoder => panic!("unsupported encoder {}", encoder),
         }
     }
 
@@ -837,7 +843,8 @@ mod tests {
                     })
                     .sum();
                 let psnr = 20. * (max - min).log10() - 10. * mse.log10();
-                assert!(psnr < psnr_bound);
+                // PSNR for zero error is infinity but meets the bound
+                assert!(mse == 0.0 || psnr < psnr_bound);
             }
             ErrorBound::L2Norm(l2norm_bound) => {
                 let mse: f64 = data
@@ -876,6 +883,12 @@ mod tests {
                     let rel = abs / range;
                     assert!((rel < relative_bound) || (abs < absolute_bound));
                 }
+            }
+        }
+
+        if matches!(config.compression_algorithm, CompressionAlgorithm::Lossless) {
+            for (orig, compressed) in data.data().iter().zip(decompressed_data.data()) {
+                assert_eq!(f64::from(*orig).to_bits(), f64::from(*compressed).to_bits());
             }
         }
 
@@ -937,6 +950,7 @@ mod tests {
         ([(lossless_bypass, LossLess::LossLessBypass), (zstd, LossLess::ZSTD)],
         ([(true, cfg(feature = "openmp")), (false, cfg(all()))],
         ([
+            (absolute_0, ErrorBound::Absolute(0.)),
             (absolute_1_0, ErrorBound::Absolute(1.)),
             (absolute_0_1, ErrorBound::Absolute(0.1)),
             (absolute_0_01, ErrorBound::Absolute(0.01)),
@@ -968,7 +982,9 @@ mod tests {
                 Some(true),
                 Some(true),
                 None
-            ))
+            )),
+            (no_prediction, CompressionAlgorithm::NoPrediction),
+            (lossless, CompressionAlgorithm::Lossless)
         ],
         ([(linear, InterpolationAlgorithm::Linear), (cubic, InterpolationAlgorithm::Cubic)],
         ([65536, 256, 2097152],
