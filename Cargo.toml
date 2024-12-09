@@ -1,6 +1,6 @@
 [package]
 name = "sz3"
-version = "0.1.1+SZ3-3.1.8.1"
+version = "0.2.0+SZ3-3.2.1"
 edition = "2021"
 authors = ["Robin Ole Heinemann <robin.ole.heinemann@gmail.com>"]
 description = "High level bindings to the SZ3 lossy floating point compressor."
@@ -16,7 +16,7 @@ exclude = ["test_data/*"]
 openmp = ["sz3-sys/openmp"]
 
 [dependencies]
-sz3-sys = { path = "sz3-sys", version = "0.1.1" }
+sz3-sys = { path = "sz3-sys", version = "0.2.0" }
 thiserror = "1.0.61"
 
 [dev-dependencies]
