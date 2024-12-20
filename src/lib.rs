@@ -296,36 +296,6 @@ pub struct Config {
     block_size: Option<u32>,
 }
 
-#[derive(Debug)]
-enum OwnedOrBorrowed<'a, A: ?Sized, B> {
-    Borrowed(&'a A),
-    Owned(B),
-}
-
-impl<'a, A: ?Sized, B: Clone> Clone for OwnedOrBorrowed<'a, A, B> {
-    fn clone(&self) -> Self {
-        match self {
-            Self::Borrowed(a) => Self::Borrowed(a),
-            Self::Owned(b) => Self::Owned(b.clone()),
-        }
-    }
-}
-
-impl<'a, A: ?Sized, B, T: 'a> std::ops::Deref for OwnedOrBorrowed<'a, A, B>
-where
-    B: std::ops::Deref<Target = T>,
-    T: std::ops::Deref<Target = A>,
-{
-    type Target = A;
-
-    fn deref(&self) -> &Self::Target {
-        match self {
-            Self::Owned(owned) => owned,
-            Self::Borrowed(borrowed) => borrowed,
-        }
-    }
-}
-
 pub trait SZ3Compressible: private::Sealed + std::ops::Sub<Output = Self> + Sized {}
 impl SZ3Compressible for f32 {}
 impl SZ3Compressible for f64 {}
@@ -334,107 +304,151 @@ impl SZ3Compressible for i64 {}
 
 mod private {
     pub trait Sealed {
+        unsafe fn compress_size_bound(config: sz3_sys::SZ3_Config) -> usize;
+
         unsafe fn compress(
             config: sz3_sys::SZ3_Config,
             data: *const Self,
-            len: *mut usize,
-        ) -> *mut i8;
-        unsafe fn decompress(
-            compressed_data: *const i8,
+            compressed_data: *mut u8,
+            compressed_capacity: usize,
+        ) -> usize;
+
+        unsafe fn decompress_num(
+            compressed_data: *const u8,
             compressed_len: usize,
-            uncompressed: *mut *mut Self,
+        ) -> usize;
+
+        unsafe fn decompress(
+            compressed_data: *const u8,
+            compressed_len: usize,
+            decompressed_data: *mut Self,
         ) -> sz3_sys::SZ3_Config;
-        unsafe fn dealloc(data: *mut Self);
     }
+
     impl Sealed for f32 {
+        unsafe fn compress_size_bound(config: sz3_sys::SZ3_Config) -> usize {
+            sz3_sys::compress_float_size_bound(config)
+        }
+
         unsafe fn compress(
             config: sz3_sys::SZ3_Config,
             data: *const Self,
-            len: *mut usize,
-        ) -> *mut i8 {
-            sz3_sys::compress_float(config, data, len) as _
+            compressed_data: *mut u8,
+            compressed_capacity: usize,
+        ) -> usize {
+            sz3_sys::compress_float(config, data, compressed_data.cast(), compressed_capacity)
+        }
+
+        unsafe fn decompress_num(
+            compressed_data: *const u8,
+            compressed_len: usize,
+        ) -> usize {
+            sz3_sys::decompress_float_num(compressed_data.cast(), compressed_len)
         }
 
         unsafe fn decompress(
-            compressed_data: *const i8,
+            compressed_data: *const u8,
             compressed_len: usize,
-            uncompressed: *mut *mut Self,
+            decompressed_data: *mut Self,
         ) -> sz3_sys::SZ3_Config {
-            sz3_sys::decompress_float(compressed_data as _, compressed_len, uncompressed)
-        }
-
-        unsafe fn dealloc(data: *mut Self) {
-            sz3_sys::dealloc_result_float(data)
+            sz3_sys::decompress_float(compressed_data.cast(), compressed_len, decompressed_data)
         }
     }
+
     impl Sealed for f64 {
+        unsafe fn compress_size_bound(config: sz3_sys::SZ3_Config) -> usize {
+            sz3_sys::compress_double_size_bound(config)
+        }
+
         unsafe fn compress(
             config: sz3_sys::SZ3_Config,
             data: *const Self,
-            len: *mut usize,
-        ) -> *mut i8 {
-            sz3_sys::compress_double(config, data, len) as _
+            compressed_data: *mut u8,
+            compressed_capacity: usize,
+        ) -> usize {
+            sz3_sys::compress_double(config, data, compressed_data.cast(), compressed_capacity)
+        }
+
+        unsafe fn decompress_num(
+            compressed_data: *const u8,
+            compressed_len: usize,
+        ) -> usize {
+            sz3_sys::decompress_double_num(compressed_data.cast(), compressed_len)
         }
 
         unsafe fn decompress(
-            compressed_data: *const i8,
+            compressed_data: *const u8,
             compressed_len: usize,
-            uncompressed: *mut *mut Self,
+            decompressed_data: *mut Self,
         ) -> sz3_sys::SZ3_Config {
-            sz3_sys::decompress_double(compressed_data as _, compressed_len, uncompressed)
-        }
-
-        unsafe fn dealloc(data: *mut Self) {
-            sz3_sys::dealloc_result_double(data)
+            sz3_sys::decompress_double(compressed_data.cast(), compressed_len, decompressed_data)
         }
     }
+
     impl Sealed for i32 {
+        unsafe fn compress_size_bound(config: sz3_sys::SZ3_Config) -> usize {
+            sz3_sys::compress_int32_t_size_bound(config)
+        }
+
         unsafe fn compress(
             config: sz3_sys::SZ3_Config,
             data: *const Self,
-            len: *mut usize,
-        ) -> *mut i8 {
-            sz3_sys::compress_int32_t(config, data, len) as _
+            compressed_data: *mut u8,
+            compressed_capacity: usize,
+        ) -> usize {
+            sz3_sys::compress_int32_t(config, data, compressed_data.cast(), compressed_capacity)
+        }
+
+        unsafe fn decompress_num(
+            compressed_data: *const u8,
+            compressed_len: usize,
+        ) -> usize {
+            sz3_sys::decompress_int32_t_num(compressed_data.cast(), compressed_len)
         }
 
         unsafe fn decompress(
-            compressed_data: *const i8,
+            compressed_data: *const u8,
             compressed_len: usize,
-            uncompressed: *mut *mut Self,
+            decompressed_data: *mut Self,
         ) -> sz3_sys::SZ3_Config {
-            sz3_sys::decompress_int32_t(compressed_data as _, compressed_len, uncompressed)
-        }
-
-        unsafe fn dealloc(data: *mut Self) {
-            sz3_sys::dealloc_result_int32_t(data)
+            sz3_sys::decompress_int32_t(compressed_data.cast(), compressed_len, decompressed_data)
         }
     }
+
     impl Sealed for i64 {
+        unsafe fn compress_size_bound(config: sz3_sys::SZ3_Config) -> usize {
+            sz3_sys::compress_int64_t_size_bound(config)
+        }
+
         unsafe fn compress(
             config: sz3_sys::SZ3_Config,
             data: *const Self,
-            len: *mut usize,
-        ) -> *mut i8 {
-            sz3_sys::compress_int64_t(config, data, len) as _
+            compressed_data: *mut u8,
+            compressed_capacity: usize,
+        ) -> usize {
+            sz3_sys::compress_int64_t(config, data, compressed_data.cast(), compressed_capacity)
+        }
+
+        unsafe fn decompress_num(
+            compressed_data: *const u8,
+            compressed_len: usize,
+        ) -> usize {
+            sz3_sys::decompress_int64_t_num(compressed_data.cast(), compressed_len)
         }
 
         unsafe fn decompress(
-            compressed_data: *const i8,
+            compressed_data: *const u8,
             compressed_len: usize,
-            uncompressed: *mut *mut Self,
+            decompressed_data: *mut Self,
         ) -> sz3_sys::SZ3_Config {
-            sz3_sys::decompress_int64_t(compressed_data as _, compressed_len, uncompressed)
-        }
-
-        unsafe fn dealloc(data: *mut Self) {
-            sz3_sys::dealloc_result_int64_t(data)
+            sz3_sys::decompress_int64_t(compressed_data.cast(), compressed_len, decompressed_data)
         }
     }
 }
 
 #[derive(Clone, Debug)]
-pub struct DimensionedData<'a, V: SZ3Compressible> {
-    data: OwnedOrBorrowed<'a, [V], SZ3DecompressionResult<V>>,
+pub struct DimensionedData<V: SZ3Compressible, T: std::ops::Deref<Target = [V]>> {
+    data: T,
     dims: Vec<usize>,
 }
 
@@ -445,20 +459,8 @@ pub struct DimensionedDataBuilder<'a, V> {
     remainder: usize,
 }
 
-impl<V: SZ3Compressible> DimensionedData<'static, V> {
-    fn from_raw(config: sz3_sys::SZ3_Config, data: SZ3DecompressionResult<V>) -> Self {
-        let dims = (0..config.N)
-            .map(|i| unsafe { std::ptr::read(config.dims.add(i as _)) })
-            .collect();
-        Self {
-            data: OwnedOrBorrowed::Owned(data),
-            dims,
-        }
-    }
-}
-
-impl<'a, V: SZ3Compressible> DimensionedData<'a, V> {
-    pub fn build<T: std::ops::Deref<Target = [V]>>(data: &'a T) -> DimensionedDataBuilder<'a, V> {
+impl<V: SZ3Compressible, T: std::ops::Deref<Target = [V]>> DimensionedData<V, T> {
+    pub fn build<'a>(data: &'a T) -> DimensionedDataBuilder<'a, V> {
         DimensionedDataBuilder {
             data,
             dims: vec![],
@@ -468,6 +470,10 @@ impl<'a, V: SZ3Compressible> DimensionedData<'a, V> {
 
     pub fn data(&self) -> &[V] {
         &self.data
+    }
+
+    pub fn into_data(self) -> T {
+        self.data
     }
 
     pub fn dims(&self) -> &[usize] {
@@ -544,12 +550,12 @@ impl<'a, V: SZ3Compressible> DimensionedDataBuilder<'a, V> {
         }
     }
 
-    pub fn remainder_dim(self) -> Result<DimensionedData<'a, V>> {
+    pub fn remainder_dim(self) -> Result<DimensionedData<V, &'a [V]>> {
         let remainder = self.remainder;
         self.dim(remainder)?.finish()
     }
 
-    pub fn finish(self) -> Result<DimensionedData<'a, V>> {
+    pub fn finish(self) -> Result<DimensionedData<V, &'a [V]>> {
         if self.remainder != 1 {
             Err(SZ3Error::UnderSpecifiedDimensions {
                 dims: self.dims,
@@ -558,7 +564,7 @@ impl<'a, V: SZ3Compressible> DimensionedDataBuilder<'a, V> {
             })
         } else {
             Ok(DimensionedData {
-                data: OwnedOrBorrowed::Borrowed(self.data),
+                data: self.data,
                 dims: self.dims,
             })
         }
@@ -644,38 +650,18 @@ impl Config {
     }
 }
 
-#[derive(Debug)]
-pub struct SZ3CompressionResult {
-    data: *mut u8,
-    len: usize,
-}
-
-impl Drop for SZ3CompressionResult {
-    fn drop(&mut self) {
-        unsafe { sz3_sys::dealloc_result(self.data as _) };
-    }
-}
-
-impl std::ops::Deref for SZ3CompressionResult {
-    type Target = [u8];
-
-    fn deref(&self) -> &Self::Target {
-        unsafe { std::slice::from_raw_parts(self.data, self.len) }
-    }
-}
-
-pub fn compress<V: SZ3Compressible>(
-    data: &DimensionedData<'_, V>,
+pub fn compress<V: SZ3Compressible, T: std::ops::Deref<Target = [V]>>(
+    data: &DimensionedData<V, T>,
     error_bound: ErrorBound,
-) -> Result<SZ3CompressionResult> {
+) -> Result<Vec<u8>> {
     let config = Config::new(error_bound);
     compress_with_config(data, &config)
 }
 
-pub fn compress_with_config<V: SZ3Compressible>(
-    data: &DimensionedData<'_, V>,
+pub fn compress_with_config<V: SZ3Compressible, T: std::ops::Deref<Target = [V]>>(
+    data: &DimensionedData<V, T>,
     config: &Config,
-) -> Result<SZ3CompressionResult> {
+) -> Result<Vec<u8>> {
     if let Some(prediction_dimension) = config.compression_algorithm.prediction_dimension() {
         let data_dimensions = data.dims().len() as u32;
         if prediction_dimension == 0 {
@@ -720,56 +706,37 @@ pub fn compress_with_config<V: SZ3Compressible>(
         stride: block_size as _,
     };
 
-    let mut len: usize = 0;
-    let data = unsafe { V::compress(raw_config, data.as_ptr() as _, &mut len) };
+    let capacity: usize = unsafe { V::compress_size_bound(raw_config) };
+    let mut compressed_data = Vec::with_capacity(capacity);
 
-    Ok(SZ3CompressionResult {
-        data: data as _,
-        len: len as _,
-    })
-}
+    let len = unsafe { V::compress(raw_config, data.as_ptr(), compressed_data.as_mut_ptr(), capacity) };
+    unsafe { compressed_data.set_len(len) };
 
-type SZ3DecompressionResult<T> = std::rc::Rc<SZ3DecompressionResultInner<T>>;
-
-#[derive(Debug)]
-struct SZ3DecompressionResultInner<T: SZ3Compressible> {
-    data: *mut T,
-    len: usize,
-}
-
-impl<T: SZ3Compressible> Drop for SZ3DecompressionResultInner<T> {
-    fn drop(&mut self) {
-        unsafe { T::dealloc(self.data) };
-    }
-}
-
-impl<T: SZ3Compressible> std::ops::Deref for SZ3DecompressionResultInner<T> {
-    type Target = [T];
-
-    fn deref(&self) -> &Self::Target {
-        unsafe { std::slice::from_raw_parts(self.data, self.len) }
-    }
+    Ok(compressed_data)
 }
 
 pub fn decompress<V: SZ3Compressible, T: std::ops::Deref<Target = [u8]>>(
     compressed_data: T,
-) -> (Config, DimensionedData<'static, V>) {
-    let mut destination_ptr = std::ptr::null_mut();
+) -> (Config, DimensionedData<V, Vec<V>>) {
+    let len = unsafe { V::decompress_num(compressed_data.as_ptr(), compressed_data.len()) };
+    let mut data = Vec::with_capacity(len);
+
     let config = unsafe {
         V::decompress(
-            compressed_data.as_ptr() as _,
-            compressed_data.len() as _,
-            &mut destination_ptr,
+            compressed_data.as_ptr(),
+            compressed_data.len(),
+            data.as_mut_ptr(),
         )
     };
-
-    let data = std::rc::Rc::new(SZ3DecompressionResultInner {
-        data: destination_ptr,
-        len: config.num as _,
-    });
+    unsafe { data.set_len(len) };
 
     let decoded = Config::from_decompressed(config);
-    let data = DimensionedData::from_raw(config, data);
+
+    let dims = (0..config.N)
+        .map(|i| unsafe { std::ptr::read(config.dims.add(i as _)) })
+        .collect();
+
+    let data = DimensionedData { data, dims };
 
     unsafe {
         sz3_sys::dealloc_config_dims(config.dims);
@@ -795,7 +762,7 @@ mod tests {
     }
 
     fn check_error_bound<T: SZ3Compressible + Copy + 'static>(
-        data: &'_ DimensionedData<'_, T>,
+        data: &DimensionedData<T, &[T]>,
         config: &Config,
         error_bound: ErrorBound,
     ) -> Result<()>
