@@ -94,6 +94,7 @@ fn main() {
         .warnings(false)
         .flag_if_supported("-std=c++17")
         .flag_if_supported("/std:c++17")
+        .flag_if_supported("-std:c++17")
         .include(sz3_root.join("include"))
         .include(zstd_root.join("include"))
         .file("lib.cpp");
