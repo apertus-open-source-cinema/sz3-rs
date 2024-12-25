@@ -91,13 +91,11 @@ fn main() {
 
     build
         .cpp(true)
-        .warnings(false)
-        .flag_if_supported("-std=c++17")
-        .flag_if_supported("/std:c++17")
-        .flag_if_supported("-std:c++17")
+        .std("c++17")
         .include(sz3_root.join("include"))
         .include(zstd_root.join("include"))
-        .file("lib.cpp");
+        .file("lib.cpp")
+        .warnings(false);
 
     if cfg!(feature = "openmp") {
         env::var("DEP_OPENMP_FLAG") // set by openmp-sys
