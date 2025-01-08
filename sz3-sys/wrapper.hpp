@@ -77,27 +77,28 @@ struct SZ3_Config {
 
 
 #define func(ty) \
-    char * compress_ ## ty(SZ3_Config config, const ty * data, size_t &outSize) { \
-        return SZ_compress(config.into(), data, outSize); \
+    size_t compress_ ## ty ## _size_bound(SZ3_Config config) { \
+        return SZ3::SZ_compress_size_bound<ty>(config.into()); \
     } \
-    SZ3_Config decompress_ ## ty(const char * compressedData, size_t compressedSize, ty *&decompressedData) { \
+    size_t compress_ ## ty(SZ3_Config config, const ty * data, char * compressedData, size_t compressedCapacity) { \
+        return SZ_compress<ty>(config.into(), data, compressedData, compressedCapacity); \
+    } \
+    size_t decompress_ ## ty ## _num(const char * compressedData, size_t compressedSize) { \
         auto conf = SZ3::Config{}; \
-        auto d = std::vector<char>(compressedData, compressedData + compressedSize); \
-        SZ_decompress(conf, d.data(), d.size(), decompressedData); \
-        return SZ3_Config(conf); \
+        auto compressedConfig = reinterpret_cast<const SZ3::uchar *>(compressedData); \
+        conf.load(compressedConfig); \
+        return conf.num; \
     } \
-    void dealloc_result_ ## ty(ty * result) { \
-        delete [] result; \
+    SZ3_Config decompress_ ## ty(const char * compressedData, size_t compressedSize, ty * decompressedData) { \
+        auto conf = SZ3::Config{}; \
+        SZ_decompress<ty>(conf, compressedData, compressedSize, decompressedData); \
+        return SZ3_Config(conf); \
     }
 
 func(float)
 func(double)
 func(int32_t)
 func(int64_t)
-
-void dealloc_result(char * data) {
-    delete[] data;
-}
 
 void dealloc_config_dims(size_t * data) {
     delete[] data;

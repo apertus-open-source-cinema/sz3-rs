@@ -62,20 +62,23 @@ fn main() {
         .allowlist_type("SZ3::EB")
         .allowlist_type("SZ3::ALGO")
         .allowlist_type("SZ3::INTERP_ALGO")
+        .allowlist_function("compress_float_size_bound")
+        .allowlist_function("compress_double_size_bound")
+        .allowlist_function("compress_int32_t_size_bound")
+        .allowlist_function("compress_int64_t_size_bound")
         .allowlist_function("compress_float")
         .allowlist_function("compress_double")
         .allowlist_function("compress_int32_t")
         .allowlist_function("compress_int64_t")
+        .allowlist_function("decompress_float_num")
+        .allowlist_function("decompress_double_num")
+        .allowlist_function("decompress_int32_t_num")
+        .allowlist_function("decompress_int64_t_num")
         .allowlist_function("decompress_float")
         .allowlist_function("decompress_double")
         .allowlist_function("decompress_int32_t")
         .allowlist_function("decompress_int64_t")
-        .allowlist_function("dealloc_result_float")
-        .allowlist_function("dealloc_result_double")
-        .allowlist_function("dealloc_result_int32_t")
-        .allowlist_function("dealloc_result_int64_t")
         .allowlist_function("dealloc_config_dims")
-        .allowlist_function("dealloc_result")
         .generate()
         .expect("Unable to generate bindings");
 
@@ -88,12 +91,11 @@ fn main() {
 
     build
         .cpp(true)
-        .warnings(false)
-        .flag_if_supported("-std=c++17")
-        .flag_if_supported("/std:c++17")
+        .std("c++17")
         .include(sz3_root.join("include"))
         .include(zstd_root.join("include"))
-        .file("lib.cpp");
+        .file("lib.cpp")
+        .warnings(false);
 
     if cfg!(feature = "openmp") {
         env::var("DEP_OPENMP_FLAG") // set by openmp-sys
