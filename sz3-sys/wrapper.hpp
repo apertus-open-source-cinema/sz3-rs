@@ -15,13 +15,14 @@ struct SZ3_Config {
     bool regression;
     bool regression2;
     bool openmp;
-    uint8_t lossless;
-    uint8_t encoder;
-    uint8_t interpAlgo;
     int quantbinCnt;
     int blockSize;
-    int stride;
-    int pred_dim;
+    int predDim;
+    uint8_t interpAlgo;
+    // uint8_t interpDirection;
+    // int interpAnchorStride;
+    // double interpAlpha;
+    // double interpBeta;
 
     SZ3::Config into() {
         auto conf = SZ3::Config{};
@@ -39,13 +40,14 @@ struct SZ3_Config {
         conf.regression = regression;
         conf.regression2 = regression2;
         conf.openmp = openmp;
-        conf.lossless = lossless;
-        conf.encoder = encoder;
-        conf.interpAlgo = interpAlgo;
         conf.quantbinCnt = quantbinCnt;
         conf.blockSize = blockSize;
-        conf.stride = stride;
-        conf.pred_dim = pred_dim;
+        conf.predDim = predDim;
+        conf.interpAlgo = interpAlgo;
+        // conf.interpDirection = interpDirection;
+        // conf.interpAnchorStride = interpAnchorStride;
+        // conf.interpAlpha = interpAlpha;
+        // conf.interpBeta = interpBeta;
         return conf;
     }
 
@@ -65,13 +67,14 @@ struct SZ3_Config {
         regression = conf.regression;
         regression2 = conf.regression2;
         openmp = conf.openmp;
-        lossless = conf.lossless;
-        encoder = conf.encoder;
-        interpAlgo = conf.interpAlgo;
         quantbinCnt = conf.quantbinCnt;
         blockSize = conf.blockSize;
-        stride = conf.stride;
-        pred_dim = conf.pred_dim;
+        predDim = conf.predDim;
+        interpAlgo = conf.interpAlgo;
+        // interpDirection = conf.interpDirection;
+        // interpAnchorStride = conf.interpAnchorStride;
+        // interpAlpha = conf.interpAlpha;
+        // interpBeta = conf.interpBeta;
     }
 };
 
@@ -97,7 +100,13 @@ struct SZ3_Config {
 
 func(float)
 func(double)
+func(uint8_t)
+func(int8_t)
+func(uint16_t)
+func(int16_t)
+func(uint32_t)
 func(int32_t)
+func(uint64_t)
 func(int64_t)
 
 void dealloc_config_dims(size_t * data) {

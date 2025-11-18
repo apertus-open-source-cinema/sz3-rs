@@ -25,7 +25,7 @@ impl CompressionAlgorithm {
                 lorenzo_second_order: config.lorenzo2,
                 regression: config.regression,
                 regression_second_order: config.regression2,
-                prediction_dimension: Some(config.pred_dim as _),
+                prediction_dimension: Some(config.predDim as _),
             },
             sz3_sys::SZ3_ALGO_ALGO_NOPRED => Self::NoPrediction,
             sz3_sys::SZ3_ALGO_ALGO_LOSSLESS => Self::Lossless,
@@ -235,64 +235,11 @@ impl InterpolationAlgorithm {
     }
 }
 
-#[derive(Clone, Debug, Copy, Default)]
-pub enum LossLess {
-    LossLessBypass,
-    #[default]
-    ZSTD,
-}
-
-impl LossLess {
-    fn decode(config: sz3_sys::SZ3_Config) -> Self {
-        match config.lossless {
-            0 => LossLess::LossLessBypass,
-            1 => LossLess::ZSTD,
-            mode => panic!("unsupported lossless mode {}", mode),
-        }
-    }
-
-    fn code(&self) -> u8 {
-        match self {
-            Self::LossLessBypass => 0,
-            Self::ZSTD => 1,
-        }
-    }
-}
-
-#[derive(Clone, Debug, Copy, Default)]
-pub enum Encoder {
-    SkipEncoder,
-    #[default]
-    HuffmanEncoder,
-    ArithmeticEncoder,
-}
-
-impl Encoder {
-    fn decode(config: sz3_sys::SZ3_Config) -> Self {
-        match config.encoder {
-            0 => Self::SkipEncoder,
-            1 => Self::HuffmanEncoder,
-            2 => Self::ArithmeticEncoder,
-            encoder => panic!("unsupported encoder {}", encoder),
-        }
-    }
-
-    fn code(&self) -> u8 {
-        match self {
-            Self::SkipEncoder => 0,
-            Self::HuffmanEncoder => 1,
-            Self::ArithmeticEncoder => 2,
-        }
-    }
-}
-
 #[derive(Clone, Debug)]
 pub struct Config {
     compression_algorithm: CompressionAlgorithm,
     error_bound: ErrorBound,
     openmp: bool,
-    lossless: LossLess,
-    encoder: Encoder,
     interpolation_algorithm: InterpolationAlgorithm,
     quantization_bincount: u32,
     block_size: Option<u32>,
@@ -301,7 +248,13 @@ pub struct Config {
 pub trait SZ3Compressible: private::Sealed + std::ops::Sub<Output = Self> + Sized {}
 impl SZ3Compressible for f32 {}
 impl SZ3Compressible for f64 {}
+impl SZ3Compressible for u8 {}
+impl SZ3Compressible for i8 {}
+impl SZ3Compressible for u16 {}
+impl SZ3Compressible for i16 {}
+impl SZ3Compressible for u32 {}
 impl SZ3Compressible for i32 {}
+impl SZ3Compressible for u64 {}
 impl SZ3Compressible for i64 {}
 
 mod private {
@@ -324,113 +277,51 @@ mod private {
         ) -> sz3_sys::SZ3_Config;
     }
 
-    impl Sealed for f32 {
-        unsafe fn compress_size_bound(config: sz3_sys::SZ3_Config) -> usize {
-            sz3_sys::compress_float_size_bound(config)
-        }
+    macro_rules! impl_sealed {
+        ($($ty:ty => $cty:ident),*) => {
+            $(paste::paste! {
+                impl Sealed for $ty {
+                    unsafe fn compress_size_bound(config: sz3_sys::SZ3_Config) -> usize {
+                        sz3_sys::[<compress_ $cty _size_bound>](config)
+                    }
 
-        unsafe fn compress(
-            config: sz3_sys::SZ3_Config,
-            data: *const Self,
-            compressed_data: *mut u8,
-            compressed_capacity: usize,
-        ) -> usize {
-            sz3_sys::compress_float(config, data, compressed_data.cast(), compressed_capacity)
-        }
+                    unsafe fn compress(
+                        config: sz3_sys::SZ3_Config,
+                        data: *const Self,
+                        compressed_data: *mut u8,
+                        compressed_capacity: usize,
+                    ) -> usize {
+                        sz3_sys::[<compress_ $cty>](config, data, compressed_data.cast(), compressed_capacity)
+                    }
 
-        unsafe fn decompress_num(compressed_data: *const u8, compressed_len: usize) -> usize {
-            sz3_sys::decompress_float_num(compressed_data.cast(), compressed_len)
-        }
+                    unsafe fn decompress_num(compressed_data: *const u8, compressed_len: usize) -> usize {
+                        sz3_sys::[<decompress_ $cty _num>](compressed_data.cast(), compressed_len)
+                    }
 
-        unsafe fn decompress(
-            compressed_data: *const u8,
-            compressed_len: usize,
-            decompressed_data: *mut Self,
-        ) -> sz3_sys::SZ3_Config {
-            sz3_sys::decompress_float(compressed_data.cast(), compressed_len, decompressed_data)
+                    unsafe fn decompress(
+                        compressed_data: *const u8,
+                        compressed_len: usize,
+                        decompressed_data: *mut Self,
+                    ) -> sz3_sys::SZ3_Config {
+                        sz3_sys::[<decompress_ $cty>](compressed_data.cast(), compressed_len, decompressed_data)
+                    }
+                }
+            })*
         }
     }
 
-    impl Sealed for f64 {
-        unsafe fn compress_size_bound(config: sz3_sys::SZ3_Config) -> usize {
-            sz3_sys::compress_double_size_bound(config)
-        }
-
-        unsafe fn compress(
-            config: sz3_sys::SZ3_Config,
-            data: *const Self,
-            compressed_data: *mut u8,
-            compressed_capacity: usize,
-        ) -> usize {
-            sz3_sys::compress_double(config, data, compressed_data.cast(), compressed_capacity)
-        }
-
-        unsafe fn decompress_num(compressed_data: *const u8, compressed_len: usize) -> usize {
-            sz3_sys::decompress_double_num(compressed_data.cast(), compressed_len)
-        }
-
-        unsafe fn decompress(
-            compressed_data: *const u8,
-            compressed_len: usize,
-            decompressed_data: *mut Self,
-        ) -> sz3_sys::SZ3_Config {
-            sz3_sys::decompress_double(compressed_data.cast(), compressed_len, decompressed_data)
-        }
-    }
-
-    impl Sealed for i32 {
-        unsafe fn compress_size_bound(config: sz3_sys::SZ3_Config) -> usize {
-            sz3_sys::compress_int32_t_size_bound(config)
-        }
-
-        unsafe fn compress(
-            config: sz3_sys::SZ3_Config,
-            data: *const Self,
-            compressed_data: *mut u8,
-            compressed_capacity: usize,
-        ) -> usize {
-            sz3_sys::compress_int32_t(config, data, compressed_data.cast(), compressed_capacity)
-        }
-
-        unsafe fn decompress_num(compressed_data: *const u8, compressed_len: usize) -> usize {
-            sz3_sys::decompress_int32_t_num(compressed_data.cast(), compressed_len)
-        }
-
-        unsafe fn decompress(
-            compressed_data: *const u8,
-            compressed_len: usize,
-            decompressed_data: *mut Self,
-        ) -> sz3_sys::SZ3_Config {
-            sz3_sys::decompress_int32_t(compressed_data.cast(), compressed_len, decompressed_data)
-        }
-    }
-
-    impl Sealed for i64 {
-        unsafe fn compress_size_bound(config: sz3_sys::SZ3_Config) -> usize {
-            sz3_sys::compress_int64_t_size_bound(config)
-        }
-
-        unsafe fn compress(
-            config: sz3_sys::SZ3_Config,
-            data: *const Self,
-            compressed_data: *mut u8,
-            compressed_capacity: usize,
-        ) -> usize {
-            sz3_sys::compress_int64_t(config, data, compressed_data.cast(), compressed_capacity)
-        }
-
-        unsafe fn decompress_num(compressed_data: *const u8, compressed_len: usize) -> usize {
-            sz3_sys::decompress_int64_t_num(compressed_data.cast(), compressed_len)
-        }
-
-        unsafe fn decompress(
-            compressed_data: *const u8,
-            compressed_len: usize,
-            decompressed_data: *mut Self,
-        ) -> sz3_sys::SZ3_Config {
-            sz3_sys::decompress_int64_t(compressed_data.cast(), compressed_len, decompressed_data)
-        }
-    }
+    impl_sealed!(
+        u8 => uint8_t,
+        i8 => int8_t,
+        u16 => uint16_t,
+        i16 => int16_t,
+        u32 => uint32_t,
+        i32 => int32_t,
+        u64 => uint64_t,
+        i64 => int64_t,
+        f32 => float,
+        f64 => double
+    );
 }
 
 #[derive(Clone, Debug)]
@@ -564,8 +455,6 @@ impl Config {
             compression_algorithm: CompressionAlgorithm::decode(config),
             error_bound: ErrorBound::decode(config),
             openmp: config.openmp,
-            lossless: LossLess::decode(config),
-            encoder: Encoder::decode(config),
             interpolation_algorithm: InterpolationAlgorithm::decode(config),
             quantization_bincount: config.quantbinCnt as _,
             block_size: Some(config.blockSize as _),
@@ -579,8 +468,6 @@ impl Config {
             compression_algorithm: Default::default(),
             error_bound,
             openmp: false,
-            encoder: Default::default(),
-            lossless: Default::default(),
             interpolation_algorithm: Default::default(),
             quantization_bincount: 65536,
             block_size: None,
@@ -600,16 +487,6 @@ impl Config {
     #[cfg(feature = "openmp")]
     pub fn openmp(mut self, openmp: bool) -> Self {
         self.openmp = openmp;
-        self
-    }
-
-    pub fn lossless(mut self, lossless: LossLess) -> Self {
-        self.lossless = lossless;
-        self
-    }
-
-    pub fn encoder(mut self, encoder: Encoder) -> Self {
-        self.encoder = encoder;
         self
     }
 
@@ -681,16 +558,13 @@ pub fn compress_with_config<V: SZ3Compressible, T: std::ops::Deref<Target = [V]>
         lorenzo2: config.compression_algorithm.lorenzo_second_order(),
         regression: config.compression_algorithm.regression(),
         regression2: config.compression_algorithm.regression_second_order(),
-        pred_dim: config
+        predDim: config
             .compression_algorithm
             .encode_prediction_dimension(data.dims().len() as _) as _,
         openmp: config.openmp,
-        lossless: config.lossless.code(),
-        encoder: config.encoder.code(),
         interpAlgo: config.interpolation_algorithm.code(),
         blockSize: block_size as _,
         quantbinCnt: config.quantization_bincount as _,
-        stride: block_size as _,
     };
 
     let capacity: usize = unsafe { V::compress_size_bound(raw_config) };
@@ -879,18 +753,17 @@ mod tests {
     }
 
     macro_rules! gen_test {
-        (($lossless_name:ident, $lossless:expr), ($openmp:expr, $openmp_cfg:meta), ($eb_name:ident, $eb:expr), ($ca_name: ident, $ca:expr), ($ia_name:ident, $ia:expr), $qb:expr, $block_size:expr) => {
+        (($openmp:expr, $openmp_cfg:meta), ($eb_name:ident, $eb:expr), ($ca_name: ident, $ca:expr), ($ia_name:ident, $ia:expr), $qb:expr, $block_size:expr) => {
             paste::paste! {
                 #[$openmp_cfg]
                 #[test]
-                fn [<test_ $lossless_name _ $openmp _ $eb_name _ $ca_name _ $ia_name _ $qb _ $block_size>]() -> Result<()> {
+                fn [<test_ $openmp _ $eb_name _ $ca_name _ $ia_name _ $qb _ $block_size>]() -> Result<()> {
                     let data = test_data::<f32>();
                     let data = DimensionedData::build(&data)
                         .dim(64)?
                         .dim(64)?
                         .remainder_dim()?;
                     let config = Config::new($eb)
-                        .lossless($lossless)
                         .error_bound($eb)
                         .compression_algorithm($ca)
                         .interpolation_algorithm($ia)
@@ -908,7 +781,6 @@ mod tests {
     }
 
     foreach_combination!(
-        ([(lossless_bypass, LossLess::LossLessBypass), (zstd, LossLess::ZSTD)],
         ([(true, cfg(feature = "openmp")), (false, cfg(all()))],
         ([
             (absolute_0, ErrorBound::Absolute(0.)),
@@ -949,6 +821,6 @@ mod tests {
         ],
         ([(linear, InterpolationAlgorithm::Linear), (cubic, InterpolationAlgorithm::Cubic)],
         ([65536, 256, 2097152],
-        ([2, 4, 8, 16])))))));
+        ([2, 4, 8, 16]))))));
         gen_test, ());
 }
