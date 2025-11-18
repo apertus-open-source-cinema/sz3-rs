@@ -1,3 +1,5 @@
+#![doc = include_str!("../README.md")]
+
 #[derive(Clone, Debug, Copy)]
 pub enum CompressionAlgorithm {
     Interpolation,
@@ -313,10 +315,7 @@ mod private {
             compressed_capacity: usize,
         ) -> usize;
 
-        unsafe fn decompress_num(
-            compressed_data: *const u8,
-            compressed_len: usize,
-        ) -> usize;
+        unsafe fn decompress_num(compressed_data: *const u8, compressed_len: usize) -> usize;
 
         unsafe fn decompress(
             compressed_data: *const u8,
@@ -339,10 +338,7 @@ mod private {
             sz3_sys::compress_float(config, data, compressed_data.cast(), compressed_capacity)
         }
 
-        unsafe fn decompress_num(
-            compressed_data: *const u8,
-            compressed_len: usize,
-        ) -> usize {
+        unsafe fn decompress_num(compressed_data: *const u8, compressed_len: usize) -> usize {
             sz3_sys::decompress_float_num(compressed_data.cast(), compressed_len)
         }
 
@@ -369,10 +365,7 @@ mod private {
             sz3_sys::compress_double(config, data, compressed_data.cast(), compressed_capacity)
         }
 
-        unsafe fn decompress_num(
-            compressed_data: *const u8,
-            compressed_len: usize,
-        ) -> usize {
+        unsafe fn decompress_num(compressed_data: *const u8, compressed_len: usize) -> usize {
             sz3_sys::decompress_double_num(compressed_data.cast(), compressed_len)
         }
 
@@ -399,10 +392,7 @@ mod private {
             sz3_sys::compress_int32_t(config, data, compressed_data.cast(), compressed_capacity)
         }
 
-        unsafe fn decompress_num(
-            compressed_data: *const u8,
-            compressed_len: usize,
-        ) -> usize {
+        unsafe fn decompress_num(compressed_data: *const u8, compressed_len: usize) -> usize {
             sz3_sys::decompress_int32_t_num(compressed_data.cast(), compressed_len)
         }
 
@@ -429,10 +419,7 @@ mod private {
             sz3_sys::compress_int64_t(config, data, compressed_data.cast(), compressed_capacity)
         }
 
-        unsafe fn decompress_num(
-            compressed_data: *const u8,
-            compressed_len: usize,
-        ) -> usize {
+        unsafe fn decompress_num(compressed_data: *const u8, compressed_len: usize) -> usize {
             sz3_sys::decompress_int64_t_num(compressed_data.cast(), compressed_len)
         }
 
@@ -709,7 +696,14 @@ pub fn compress_with_config<V: SZ3Compressible, T: std::ops::Deref<Target = [V]>
     let capacity: usize = unsafe { V::compress_size_bound(raw_config) };
     let mut compressed_data = Vec::with_capacity(capacity);
 
-    let len = unsafe { V::compress(raw_config, data.as_ptr(), compressed_data.as_mut_ptr(), capacity) };
+    let len = unsafe {
+        V::compress(
+            raw_config,
+            data.as_ptr(),
+            compressed_data.as_mut_ptr(),
+            capacity,
+        )
+    };
     unsafe { compressed_data.set_len(len) };
 
     Ok(compressed_data)

@@ -1,6 +1,6 @@
 [package]
 name = "sz3"
-version = "0.3.0+SZ3-3.2.2"
+version = "0.4.0+SZ3-3.3.1"
 edition = "2021"
 authors = ["Robin Ole Heinemann <robin.ole.heinemann@gmail.com>"]
 description = "High level bindings to the SZ3 lossy floating point compressor."
@@ -16,13 +16,13 @@ exclude = ["test_data/*"]
 openmp = ["sz3-sys/openmp"]
 
 [dependencies]
-sz3-sys = { path = "sz3-sys", version = "0.3.0" }
-thiserror = "2.0.0"
+sz3-sys = { path = "sz3-sys", version = "0.4.0", default-features = false }
+thiserror = { version = "2.0.0", default-features = false }
 
 [dev-dependencies]
-bytemuck = "1.16.0"
-align-data = "0.1.0"
-paste = "1.0.15"
+bytemuck = { version = "1.16.0", default-features = false }
+align-data = { version = "0.1.0", default-features = false }
+paste = { version = "1.0.15", default-features = false }
 
 [profile.release]
 lto = "thin"
