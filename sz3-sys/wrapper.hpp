@@ -84,17 +84,24 @@ struct SZ3_Config {
         return SZ3::SZ_compress_size_bound<ty>(config.into()); \
     } \
     size_t compress_ ## ty(SZ3_Config config, const ty * data, char * compressedData, size_t compressedCapacity) { \
-        return SZ_compress<ty>(config.into(), data, compressedData, compressedCapacity); \
+        return SZ3::SZ_compress<ty>(config.into(), data, compressedData, compressedCapacity); \
     } \
     size_t decompress_ ## ty ## _num(const char * compressedData, size_t compressedSize) { \
+        auto cmpDataPos = reinterpret_cast<const SZ3::uchar *>(compressedData); \
+        uint32_t magic; \
+        SZ3::read(magic, cmpDataPos); \
+        uint32_t ver; \
+        SZ3::read(ver, cmpDataPos); \
+        uint64_t cmpDataSize; \
+        SZ3::read(cmpDataSize,  cmpDataPos); \
+        auto cmpConfPos = cmpDataPos + cmpDataSize; \
         auto conf = SZ3::Config{}; \
-        auto compressedConfig = reinterpret_cast<const SZ3::uchar *>(compressedData); \
-        conf.load(compressedConfig); \
+        conf.load(cmpConfPos); \
         return conf.num; \
     } \
     SZ3_Config decompress_ ## ty(const char * compressedData, size_t compressedSize, ty * decompressedData) { \
         auto conf = SZ3::Config{}; \
-        SZ_decompress<ty>(conf, compressedData, compressedSize, decompressedData); \
+        SZ3::SZ_decompress<ty>(conf, compressedData, compressedSize, decompressedData); \
         return SZ3_Config(conf); \
     }
 
