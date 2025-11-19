@@ -116,6 +116,7 @@ fn main() {
     build
         .cpp(true)
         .std("c++17")
+        .flag_if_supported("/bigobj") // required on Windows
         .include(sz3_root.join("include"))
         .include(zstd_root.join("include"))
         .file("lib.cpp")
