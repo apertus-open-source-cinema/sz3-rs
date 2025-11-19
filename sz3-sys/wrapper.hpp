@@ -19,12 +19,7 @@ struct SZ3_Config {
     bool openmp;
     int quantbinCnt;
     int blockSize;
-    int predDim;
     uint8_t interpAlgo;
-    // uint8_t interpDirection;
-    // int interpAnchorStride;
-    // double interpAlpha;
-    // double interpBeta;
 
     SZ3::Config into() {
         auto conf = SZ3::Config{};
@@ -44,12 +39,7 @@ struct SZ3_Config {
         conf.openmp = openmp;
         conf.quantbinCnt = quantbinCnt;
         conf.blockSize = blockSize;
-        conf.predDim = predDim;
         conf.interpAlgo = interpAlgo;
-        // conf.interpDirection = interpDirection;
-        // conf.interpAnchorStride = interpAnchorStride;
-        // conf.interpAlpha = interpAlpha;
-        // conf.interpBeta = interpBeta;
         return conf;
     }
 
@@ -71,12 +61,7 @@ struct SZ3_Config {
         openmp = conf.openmp;
         quantbinCnt = conf.quantbinCnt;
         blockSize = conf.blockSize;
-        predDim = conf.predDim;
         interpAlgo = conf.interpAlgo;
-        // interpDirection = conf.interpDirection;
-        // interpAnchorStride = conf.interpAnchorStride;
-        // interpAlpha = conf.interpAlpha;
-        // interpBeta = conf.interpBeta;
     }
 };
 

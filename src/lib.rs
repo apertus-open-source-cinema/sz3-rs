@@ -2,14 +2,17 @@
 
 #[derive(Clone, Debug, Copy)]
 pub enum CompressionAlgorithm {
-    Interpolation,
-    InterpolationLorenzo,
+    Interpolation {
+        interpolation: InterpolationAlgorithm,
+    },
+    InterpolationLorenzo {
+        interpolation: InterpolationAlgorithm,
+    },
     LorenzoRegression {
         lorenzo: bool,
         lorenzo_second_order: bool,
         regression: bool,
         regression_second_order: bool,
-        prediction_dimension: Option<u32>,
     },
     NoPrediction,
     Lossless,
@@ -18,14 +21,17 @@ pub enum CompressionAlgorithm {
 impl CompressionAlgorithm {
     fn decode(config: sz3_sys::SZ3_Config) -> Self {
         match config.cmprAlgo as _ {
-            sz3_sys::SZ3_ALGO_ALGO_INTERP => Self::Interpolation,
-            sz3_sys::SZ3_ALGO_ALGO_INTERP_LORENZO => Self::InterpolationLorenzo,
+            sz3_sys::SZ3_ALGO_ALGO_INTERP => Self::Interpolation {
+                interpolation: InterpolationAlgorithm::decode(config),
+            },
+            sz3_sys::SZ3_ALGO_ALGO_INTERP_LORENZO => Self::InterpolationLorenzo {
+                interpolation: InterpolationAlgorithm::decode(config),
+            },
             sz3_sys::SZ3_ALGO_ALGO_LORENZO_REG => Self::LorenzoRegression {
                 lorenzo: config.lorenzo,
                 lorenzo_second_order: config.lorenzo2,
                 regression: config.regression,
                 regression_second_order: config.regression2,
-                prediction_dimension: Some(config.predDim as _),
             },
             sz3_sys::SZ3_ALGO_ALGO_NOPRED => Self::NoPrediction,
             sz3_sys::SZ3_ALGO_ALGO_LOSSLESS => Self::Lossless,
@@ -77,15 +83,35 @@ impl CompressionAlgorithm {
         }
     }
 
-    fn encode_prediction_dimension(&self, num_dims: u32) -> u32 {
-        if let Self::LorenzoRegression {
-            prediction_dimension: Some(prediction_dimension),
-            ..
-        } = self
-        {
-            *prediction_dimension
-        } else {
-            num_dims
+    fn interpolation_algorithm(&self) -> InterpolationAlgorithm {
+        match self {
+            Self::Interpolation { interpolation }
+            | Self::InterpolationLorenzo { interpolation } => *interpolation,
+            _ => InterpolationAlgorithm::Cubic,
+        }
+    }
+
+    pub fn interpolation() -> Self {
+        Self::Interpolation {
+            interpolation: InterpolationAlgorithm::Cubic,
+        }
+    }
+
+    pub fn interpolation_custom(interpolation: Option<InterpolationAlgorithm>) -> Self {
+        Self::Interpolation {
+            interpolation: interpolation.unwrap_or(InterpolationAlgorithm::Cubic),
+        }
+    }
+
+    pub fn interpolation_lorenzo() -> Self {
+        Self::InterpolationLorenzo {
+            interpolation: InterpolationAlgorithm::Cubic,
+        }
+    }
+
+    pub fn interpolation_lorenzo_custom(interpolation: Option<InterpolationAlgorithm>) -> Self {
+        Self::InterpolationLorenzo {
+            interpolation: interpolation.unwrap_or(InterpolationAlgorithm::Cubic),
         }
     }
 
@@ -95,7 +121,6 @@ impl CompressionAlgorithm {
             lorenzo_second_order: false,
             regression: true,
             regression_second_order: false,
-            prediction_dimension: None,
         }
     }
 
@@ -104,31 +129,27 @@ impl CompressionAlgorithm {
         lorenzo_second_order: Option<bool>,
         regression: Option<bool>,
         regression_second_order: Option<bool>,
-        prediction_dimension: Option<u32>,
     ) -> Self {
         Self::LorenzoRegression {
             lorenzo: lorenzo.unwrap_or(true),
             lorenzo_second_order: lorenzo_second_order.unwrap_or(false),
             regression: regression.unwrap_or(true),
             regression_second_order: regression_second_order.unwrap_or(true),
-            prediction_dimension,
         }
     }
 
-    fn prediction_dimension(&self) -> Option<u32> {
-        match self {
-            Self::LorenzoRegression {
-                prediction_dimension: Some(prediction_dimension),
-                ..
-            } => Some(*prediction_dimension),
-            _ => None,
-        }
+    pub fn no_prediction() -> Self {
+        Self::NoPrediction
+    }
+
+    pub fn lossless() -> Self {
+        Self::Lossless
     }
 }
 
 impl Default for CompressionAlgorithm {
     fn default() -> Self {
-        CompressionAlgorithm::InterpolationLorenzo
+        Self::interpolation_lorenzo()
     }
 }
 
@@ -240,7 +261,6 @@ pub struct Config {
     compression_algorithm: CompressionAlgorithm,
     error_bound: ErrorBound,
     openmp: bool,
-    interpolation_algorithm: InterpolationAlgorithm,
     quantization_bincount: u32,
     block_size: Option<u32>,
 }
@@ -391,16 +411,6 @@ pub enum SZ3Error {
         len: usize,
         remainder: usize,
     },
-    #[error("prediction dimension cannot be zero (it is one based)")]
-    PredictionDimensionZero,
-    #[error(
-        "wanted to predict along dimension {prediction_dimension}, but data only has \
-         {data_dimensions} dimensions"
-    )]
-    PredictionDimensionDataDimensionsMismatch {
-        prediction_dimension: u32,
-        data_dimensions: u32,
-    },
 }
 
 type Result<T> = std::result::Result<T, SZ3Error>;
@@ -455,7 +465,6 @@ impl Config {
             compression_algorithm: CompressionAlgorithm::decode(config),
             error_bound: ErrorBound::decode(config),
             openmp: config.openmp,
-            interpolation_algorithm: InterpolationAlgorithm::decode(config),
             quantization_bincount: config.quantbinCnt as _,
             block_size: Some(config.blockSize as _),
         }
@@ -465,10 +474,9 @@ impl Config {
 impl Config {
     pub fn new(error_bound: ErrorBound) -> Self {
         Self {
-            compression_algorithm: Default::default(),
+            compression_algorithm: CompressionAlgorithm::default(),
             error_bound,
             openmp: false,
-            interpolation_algorithm: Default::default(),
             quantization_bincount: 65536,
             block_size: None,
         }
@@ -487,14 +495,6 @@ impl Config {
     #[cfg(feature = "openmp")]
     pub fn openmp(mut self, openmp: bool) -> Self {
         self.openmp = openmp;
-        self
-    }
-
-    pub fn interpolation_algorithm(
-        mut self,
-        interpolation_algorithm: InterpolationAlgorithm,
-    ) -> Self {
-        self.interpolation_algorithm = interpolation_algorithm;
         self
     }
 
@@ -526,18 +526,6 @@ pub fn compress_with_config<V: SZ3Compressible, T: std::ops::Deref<Target = [V]>
     data: &DimensionedData<V, T>,
     config: &Config,
 ) -> Result<Vec<u8>> {
-    if let Some(prediction_dimension) = config.compression_algorithm.prediction_dimension() {
-        let data_dimensions = data.dims().len() as u32;
-        if prediction_dimension == 0 {
-            return Err(SZ3Error::PredictionDimensionZero);
-        } else if prediction_dimension > data_dimensions {
-            return Err(SZ3Error::PredictionDimensionDataDimensionsMismatch {
-                prediction_dimension,
-                data_dimensions,
-            });
-        }
-    }
-
     let block_size = config.block_size.unwrap_or(match data.dims().len() {
         1 => 128,
         2 => 16,
@@ -558,11 +546,11 @@ pub fn compress_with_config<V: SZ3Compressible, T: std::ops::Deref<Target = [V]>
         lorenzo2: config.compression_algorithm.lorenzo_second_order(),
         regression: config.compression_algorithm.regression(),
         regression2: config.compression_algorithm.regression_second_order(),
-        predDim: config
-            .compression_algorithm
-            .encode_prediction_dimension(data.dims().len() as _) as _,
         openmp: config.openmp,
-        interpAlgo: config.interpolation_algorithm.code(),
+        interpAlgo: config
+            .compression_algorithm
+            .interpolation_algorithm()
+            .code(),
         blockSize: block_size as _,
         quantbinCnt: config.quantization_bincount as _,
     };
@@ -753,11 +741,11 @@ mod tests {
     }
 
     macro_rules! gen_test {
-        (($openmp:expr, $openmp_cfg:meta), ($eb_name:ident, $eb:expr), ($ca_name: ident, $ca:expr), ($ia_name:ident, $ia:expr), $qb:expr, $block_size:expr) => {
+        (($openmp:expr, $openmp_cfg:meta), ($eb_name:ident, $eb:expr), ($ca_name: ident, $ca:expr), $qb:expr, $block_size:expr) => {
             paste::paste! {
                 #[$openmp_cfg]
                 #[test]
-                fn [<test_ $openmp _ $eb_name _ $ca_name _ $ia_name _ $qb _ $block_size>]() -> Result<()> {
+                fn [<test_ $openmp _ $eb_name _ $ca_name _ $qb _ $block_size>]() -> Result<()> {
                     let data = test_data::<f32>();
                     let data = DimensionedData::build(&data)
                         .dim(64)?
@@ -766,7 +754,6 @@ mod tests {
                     let config = Config::new($eb)
                         .error_bound($eb)
                         .compression_algorithm($ca)
-                        .interpolation_algorithm($ia)
                         .quantization_bincount($qb)
                         .block_size($block_size);
                     #[cfg(feature = "openmp")]
@@ -777,7 +764,7 @@ mod tests {
                     Ok(())
                 }
             }
-        }
+        };
     }
 
     foreach_combination!(
@@ -806,21 +793,21 @@ mod tests {
             })
         ],
         ([
-            (interpolation, CompressionAlgorithm::Interpolation),
-            (interpolation_lorenzo, CompressionAlgorithm::InterpolationLorenzo),
+            (interpolation_linear, CompressionAlgorithm::Interpolation { interpolation: InterpolationAlgorithm::Linear }),
+            (interpolation_cubic, CompressionAlgorithm::Interpolation { interpolation: InterpolationAlgorithm::Cubic }),
+            (interpolation_lorenzo_linear, CompressionAlgorithm::InterpolationLorenzo { interpolation: InterpolationAlgorithm::Linear }),
+            (interpolation_lorenzo_cubic, CompressionAlgorithm::InterpolationLorenzo { interpolation: InterpolationAlgorithm::Cubic }),
             (lorenzo_reg, CompressionAlgorithm::lorenzo_regression()),
             (lorenzo_reg_all, CompressionAlgorithm::lorenzo_regression_custom(
                 Some(true),
                 Some(true),
                 Some(true),
                 Some(true),
-                None
             )),
             (no_prediction, CompressionAlgorithm::NoPrediction),
             (lossless, CompressionAlgorithm::Lossless)
         ],
-        ([(linear, InterpolationAlgorithm::Linear), (cubic, InterpolationAlgorithm::Cubic)],
         ([65536, 256, 2097152],
-        ([2, 4, 8, 16]))))));
+        ([2, 4, 8, 16])))));
         gen_test, ());
 }
