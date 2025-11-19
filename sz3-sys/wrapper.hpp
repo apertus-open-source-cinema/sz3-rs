@@ -1,3 +1,5 @@
+#include <cstdint>
+
 #include "SZ3/api/sz.hpp"
 
 struct SZ3_Config {
@@ -84,7 +86,7 @@ struct SZ3_Config {
         return SZ3::SZ_compress_size_bound<ty>(config.into()); \
     } \
     size_t compress_ ## ty(SZ3_Config config, const ty * data, char * compressedData, size_t compressedCapacity) { \
-        return SZ3::SZ_compress<ty>(config.into(), data, compressedData, compressedCapacity); \
+        return SZ_compress<ty>(config.into(), data, compressedData, compressedCapacity); \
     } \
     size_t decompress_ ## ty ## _num(const char * compressedData, size_t compressedSize) { \
         auto cmpDataPos = reinterpret_cast<const SZ3::uchar *>(compressedData); \
@@ -101,7 +103,7 @@ struct SZ3_Config {
     } \
     SZ3_Config decompress_ ## ty(const char * compressedData, size_t compressedSize, ty * decompressedData) { \
         auto conf = SZ3::Config{}; \
-        SZ3::SZ_decompress<ty>(conf, compressedData, compressedSize, decompressedData); \
+        SZ_decompress<ty>(conf, compressedData, compressedSize, decompressedData); \
         return SZ3_Config(conf); \
     }
 
