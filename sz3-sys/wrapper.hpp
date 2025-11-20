@@ -2,6 +2,31 @@
 
 #include "SZ3/api/sz.hpp"
 
+enum SZ_DATA_TYPE {
+    FLOAT = SZ_FLOAT,
+    DOUBLE = SZ_DOUBLE,
+    UINT8 = SZ_UINT8,
+    INT8 = SZ_INT8,
+    UINT16 = SZ_UINT16,
+    INT16 = SZ_INT16,
+    UINT32 = SZ_UINT32,
+    INT32 = SZ_INT32,
+    UINT64 = SZ_UINT64,
+    INT64 = SZ_INT64,
+};
+
+
+#define SZ_FLOAT 0
+#define SZ_DOUBLE 1
+#define SZ_UINT8 2
+#define SZ_INT8 3
+#define SZ_UINT16 4
+#define SZ_INT16 5
+#define SZ_UINT32 6
+#define SZ_INT32 7
+#define SZ_UINT64 8
+#define SZ_INT64 9
+
 struct SZ3_Config {
     char N;
     size_t * dims;
@@ -17,9 +42,9 @@ struct SZ3_Config {
     bool regression;
     bool regression2;
     bool openmp;
+    uint8_t dataType;
     int quantbinCnt;
     int blockSize;
-    uint8_t interpAlgo;
 
     SZ3::Config into() {
         auto conf = SZ3::Config{};
@@ -37,9 +62,9 @@ struct SZ3_Config {
         conf.regression = regression;
         conf.regression2 = regression2;
         conf.openmp = openmp;
+        conf.dataType = dataType;
         conf.quantbinCnt = quantbinCnt;
         conf.blockSize = blockSize;
-        conf.interpAlgo = interpAlgo;
         return conf;
     }
 
@@ -59,9 +84,9 @@ struct SZ3_Config {
         regression = conf.regression;
         regression2 = conf.regression2;
         openmp = conf.openmp;
+        dataType = conf.dataType;
         quantbinCnt = conf.quantbinCnt;
         blockSize = conf.blockSize;
-        interpAlgo = conf.interpAlgo;
     }
 };
 
@@ -73,23 +98,9 @@ struct SZ3_Config {
     size_t compress_ ## ty(SZ3_Config config, const ty * data, char * compressedData, size_t compressedCapacity) { \
         return SZ_compress<ty>(config.into(), data, compressedData, compressedCapacity); \
     } \
-    size_t decompress_ ## ty ## _num(const char * compressedData, size_t compressedSize) { \
-        auto cmpDataPos = reinterpret_cast<const SZ3::uchar *>(compressedData); \
-        uint32_t magic; \
-        SZ3::read(magic, cmpDataPos); \
-        uint32_t ver; \
-        SZ3::read(ver, cmpDataPos); \
-        uint64_t cmpDataSize; \
-        SZ3::read(cmpDataSize,  cmpDataPos); \
-        auto cmpConfPos = cmpDataPos + cmpDataSize; \
-        auto conf = SZ3::Config{}; \
-        conf.load(cmpConfPos); \
-        return conf.num; \
-    } \
-    SZ3_Config decompress_ ## ty(const char * compressedData, size_t compressedSize, ty * decompressedData) { \
+    void decompress_ ## ty(const char * compressedData, size_t compressedSize, ty * decompressedData) { \
         auto conf = SZ3::Config{}; \
         SZ_decompress<ty>(conf, compressedData, compressedSize, decompressedData); \
-        return SZ3_Config(conf); \
     }
 
 func(float)
@@ -103,6 +114,20 @@ func(int32_t)
 func(uint64_t)
 func(int64_t)
 
-void dealloc_config_dims(size_t * data) {
+SZ3_Config decompress_config(const char * compressedData, size_t compressedSize) {
+    auto cmpDataPos = reinterpret_cast<const SZ3::uchar *>(compressedData);
+    uint32_t magic;
+    SZ3::read(magic, cmpDataPos);
+    uint32_t ver;
+    SZ3::read(ver, cmpDataPos);
+    uint64_t cmpDataSize;
+    SZ3::read(cmpDataSize,  cmpDataPos);
+    auto cmpConfPos = cmpDataPos + cmpDataSize;
+    auto conf = SZ3::Config{};
+    conf.load(cmpConfPos);
+    return SZ3_Config(conf);
+}
+
+void dealloc_size_t(size_t * data) {
     delete[] data;
 }

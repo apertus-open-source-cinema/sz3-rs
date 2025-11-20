@@ -1,21 +1,7 @@
 use std::{
-    collections::HashSet,
     env, fs, io,
     path::{Path, PathBuf},
 };
-
-#[derive(Debug)]
-struct IgnoreMacros(HashSet<String>);
-
-impl bindgen::callbacks::ParseCallbacks for IgnoreMacros {
-    fn will_parse_macro(&self, name: &str) -> bindgen::callbacks::MacroParsingBehavior {
-        if self.0.contains(name) {
-            bindgen::callbacks::MacroParsingBehavior::Ignore
-        } else {
-            bindgen::callbacks::MacroParsingBehavior::Default
-        }
-    }
-}
 
 fn main() {
     let zstd_root = env::var("DEP_ZSTD_ROOT")
@@ -33,18 +19,6 @@ fn main() {
     copy_dir_all(Path::new("SZ3").join("include"), sz3_root.join("include"))
         .expect("failed to copy SZ3 source");
 
-    let ignored_macros = IgnoreMacros(
-        vec![
-            "FP_INFINITE".into(),
-            "FP_NAN".into(),
-            "FP_NORMAL".into(),
-            "FP_SUBNORMAL".into(),
-            "FP_ZERO".into(),
-        ]
-        .into_iter()
-        .collect(),
-    );
-
     println!("cargo:rerun-if-changed=wrapper.hpp");
     println!("cargo:rerun-if-changed=SZ3");
 
@@ -57,11 +31,10 @@ fn main() {
         .clang_arg(format!("-I{}", zstd_root.join("include").display()))
         .header("wrapper.hpp")
         .parse_callbacks(Box::new(cargo_callbacks))
-        .parse_callbacks(Box::new(ignored_macros))
         .allowlist_type("SZ3_Config")
         .allowlist_type("SZ3::EB")
         .allowlist_type("SZ3::ALGO")
-        .allowlist_type("SZ3::INTERP_ALGO")
+        .allowlist_type("SZ_DATA_TYPE")
         .allowlist_function("compress_float_size_bound")
         .allowlist_function("compress_double_size_bound")
         .allowlist_function("compress_uint8_t_size_bound")
@@ -82,16 +55,6 @@ fn main() {
         .allowlist_function("compress_int32_t")
         .allowlist_function("compress_uint64_t")
         .allowlist_function("compress_int64_t")
-        .allowlist_function("decompress_float_num")
-        .allowlist_function("decompress_double_num")
-        .allowlist_function("decompress_uint8_t_num")
-        .allowlist_function("decompress_int8_t_num")
-        .allowlist_function("decompress_uint16_t_num")
-        .allowlist_function("decompress_int16_t_num")
-        .allowlist_function("decompress_uint32_t_num")
-        .allowlist_function("decompress_int32_t_num")
-        .allowlist_function("decompress_uint64_t_num")
-        .allowlist_function("decompress_int64_t_num")
         .allowlist_function("decompress_float")
         .allowlist_function("decompress_double")
         .allowlist_function("decompress_uint8_t")
@@ -102,7 +65,9 @@ fn main() {
         .allowlist_function("decompress_int32_t")
         .allowlist_function("decompress_uint64_t")
         .allowlist_function("decompress_int64_t")
-        .allowlist_function("dealloc_config_dims")
+        .allowlist_function("decompress_config")
+        .allowlist_function("dealloc_size_t")
+        .use_core()
         .generate()
         .expect("Unable to generate bindings");
 
