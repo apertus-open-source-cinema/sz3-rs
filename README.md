@@ -15,7 +15,7 @@ fn main() -> Result<(), SZ3Error> {
     let config = Config::new(ErrorBound::Absolute(0.02));
     
     let compressed = compress_with_config(&data, &config)?;
-    let decompressed = decompress::<f32, _>(compressed);
+    let decompressed = decompress::<f32, _>(compressed)?;
     
     Ok(())
 }
