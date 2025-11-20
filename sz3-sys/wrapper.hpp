@@ -15,18 +15,6 @@ enum SZ_DATA_TYPE {
     INT64 = SZ_INT64,
 };
 
-
-#define SZ_FLOAT 0
-#define SZ_DOUBLE 1
-#define SZ_UINT8 2
-#define SZ_INT8 3
-#define SZ_UINT16 4
-#define SZ_INT16 5
-#define SZ_UINT32 6
-#define SZ_INT32 7
-#define SZ_UINT64 8
-#define SZ_INT64 9
-
 struct SZ3_Config {
     char N;
     size_t * dims;
