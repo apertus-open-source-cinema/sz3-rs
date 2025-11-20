@@ -774,6 +774,8 @@ mod tests {
                 Some(true),
                 Some(true),
             )),
+            (biomd, CompressionAlgorithm::BiologyMolecularData),
+            // (biomdxtc, CompressionAlgorithm::BiologyMolecularDataGromacsXtc),
             (no_prediction, CompressionAlgorithm::NoPrediction),
             (lossless, CompressionAlgorithm::Lossless)
         ],
