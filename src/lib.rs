@@ -1,19 +1,20 @@
 #![doc = include_str!("../README.md")]
 
+use sz3_sys::SZ3_Config;
+
 #[derive(Clone, Debug, Copy)]
+#[non_exhaustive]
 pub enum CompressionAlgorithm {
-    Interpolation {
-        interpolation: InterpolationAlgorithm,
-    },
-    InterpolationLorenzo {
-        interpolation: InterpolationAlgorithm,
-    },
+    Interpolation,
+    InterpolationLorenzo,
     LorenzoRegression {
         lorenzo: bool,
         lorenzo_second_order: bool,
         regression: bool,
         regression_second_order: bool,
     },
+    BiologyMolecularData,
+    BiologyMolecularDataGromacsXtc,
     NoPrediction,
     Lossless,
 }
@@ -21,18 +22,16 @@ pub enum CompressionAlgorithm {
 impl CompressionAlgorithm {
     fn decode(config: sz3_sys::SZ3_Config) -> Self {
         match config.cmprAlgo as _ {
-            sz3_sys::SZ3_ALGO_ALGO_INTERP => Self::Interpolation {
-                interpolation: InterpolationAlgorithm::decode(config),
-            },
-            sz3_sys::SZ3_ALGO_ALGO_INTERP_LORENZO => Self::InterpolationLorenzo {
-                interpolation: InterpolationAlgorithm::decode(config),
-            },
+            sz3_sys::SZ3_ALGO_ALGO_INTERP => Self::Interpolation,
+            sz3_sys::SZ3_ALGO_ALGO_INTERP_LORENZO => Self::InterpolationLorenzo,
             sz3_sys::SZ3_ALGO_ALGO_LORENZO_REG => Self::LorenzoRegression {
                 lorenzo: config.lorenzo,
                 lorenzo_second_order: config.lorenzo2,
                 regression: config.regression,
                 regression_second_order: config.regression2,
             },
+            sz3_sys::SZ3_ALGO_ALGO_BIOMD => Self::BiologyMolecularData,
+            sz3_sys::SZ3_ALGO_ALGO_BIOMDXTC => Self::BiologyMolecularDataGromacsXtc,
             sz3_sys::SZ3_ALGO_ALGO_NOPRED => Self::NoPrediction,
             sz3_sys::SZ3_ALGO_ALGO_LOSSLESS => Self::Lossless,
             algo => panic!("unsupported compression algorithm {}", algo),
@@ -44,6 +43,8 @@ impl CompressionAlgorithm {
             Self::Interpolation { .. } => sz3_sys::SZ3_ALGO_ALGO_INTERP,
             Self::InterpolationLorenzo { .. } => sz3_sys::SZ3_ALGO_ALGO_INTERP_LORENZO,
             Self::LorenzoRegression { .. } => sz3_sys::SZ3_ALGO_ALGO_LORENZO_REG,
+            Self::BiologyMolecularData => sz3_sys::SZ3_ALGO_ALGO_BIOMD,
+            Self::BiologyMolecularDataGromacsXtc => sz3_sys::SZ3_ALGO_ALGO_BIOMDXTC,
             Self::NoPrediction => sz3_sys::SZ3_ALGO_ALGO_NOPRED,
             Self::Lossless => sz3_sys::SZ3_ALGO_ALGO_LOSSLESS,
         }) as _
@@ -83,36 +84,12 @@ impl CompressionAlgorithm {
         }
     }
 
-    fn interpolation_algorithm(&self) -> InterpolationAlgorithm {
-        match self {
-            Self::Interpolation { interpolation }
-            | Self::InterpolationLorenzo { interpolation } => *interpolation,
-            _ => InterpolationAlgorithm::Cubic,
-        }
-    }
-
     pub fn interpolation() -> Self {
-        Self::Interpolation {
-            interpolation: InterpolationAlgorithm::Cubic,
-        }
-    }
-
-    pub fn interpolation_custom(interpolation: Option<InterpolationAlgorithm>) -> Self {
-        Self::Interpolation {
-            interpolation: interpolation.unwrap_or(InterpolationAlgorithm::Cubic),
-        }
+        Self::Interpolation
     }
 
     pub fn interpolation_lorenzo() -> Self {
-        Self::InterpolationLorenzo {
-            interpolation: InterpolationAlgorithm::Cubic,
-        }
-    }
-
-    pub fn interpolation_lorenzo_custom(interpolation: Option<InterpolationAlgorithm>) -> Self {
-        Self::InterpolationLorenzo {
-            interpolation: interpolation.unwrap_or(InterpolationAlgorithm::Cubic),
-        }
+        Self::InterpolationLorenzo
     }
 
     pub fn lorenzo_regression() -> Self {
@@ -138,6 +115,14 @@ impl CompressionAlgorithm {
         }
     }
 
+    pub fn biology_molecular_data() -> Self {
+        Self::BiologyMolecularData
+    }
+
+    pub fn biology_molecular_data_gromacs_xtc() -> Self {
+        Self::BiologyMolecularDataGromacsXtc
+    }
+
     pub fn no_prediction() -> Self {
         Self::NoPrediction
     }
@@ -154,6 +139,7 @@ impl Default for CompressionAlgorithm {
 }
 
 #[derive(Clone, Debug, Copy)]
+#[non_exhaustive]
 pub enum ErrorBound {
     Absolute(f64),
     Relative(f64),
@@ -232,30 +218,6 @@ impl ErrorBound {
     }
 }
 
-#[derive(Clone, Debug, Copy, Default)]
-pub enum InterpolationAlgorithm {
-    Linear,
-    #[default]
-    Cubic,
-}
-
-impl InterpolationAlgorithm {
-    fn decode(config: sz3_sys::SZ3_Config) -> Self {
-        match config.interpAlgo as _ {
-            sz3_sys::SZ3_INTERP_ALGO_INTERP_ALGO_LINEAR => Self::Linear,
-            sz3_sys::SZ3_INTERP_ALGO_INTERP_ALGO_CUBIC => Self::Cubic,
-            algo => panic!("unsupported interpolation algorithm {}", algo),
-        }
-    }
-
-    fn code(&self) -> u8 {
-        (match self {
-            Self::Linear => sz3_sys::SZ3_INTERP_ALGO_INTERP_ALGO_LINEAR,
-            Self::Cubic => sz3_sys::SZ3_INTERP_ALGO_INTERP_ALGO_CUBIC,
-        }) as _
-    }
-}
-
 #[derive(Clone, Debug)]
 pub struct Config {
     compression_algorithm: CompressionAlgorithm,
@@ -279,6 +241,8 @@ impl SZ3Compressible for i64 {}
 
 mod private {
     pub trait Sealed {
+        const SZ_DATA_TYPE: sz3_sys::SZ_DATA_TYPE;
+
         unsafe fn compress_size_bound(config: sz3_sys::SZ3_Config) -> usize;
 
         unsafe fn compress(
@@ -288,19 +252,19 @@ mod private {
             compressed_capacity: usize,
         ) -> usize;
 
-        unsafe fn decompress_num(compressed_data: *const u8, compressed_len: usize) -> usize;
-
         unsafe fn decompress(
             compressed_data: *const u8,
             compressed_len: usize,
             decompressed_data: *mut Self,
-        ) -> sz3_sys::SZ3_Config;
+        );
     }
 
     macro_rules! impl_sealed {
-        ($($ty:ty => $cty:ident),*) => {
+        ($($ty:ty => $cty:ident [$CTY:ident]),*) => {
             $(paste::paste! {
                 impl Sealed for $ty {
+                    const SZ_DATA_TYPE: sz3_sys::SZ_DATA_TYPE = sz3_sys::[<SZ_DATA_TYPE_ $CTY>];
+
                     unsafe fn compress_size_bound(config: sz3_sys::SZ3_Config) -> usize {
                         sz3_sys::[<compress_ $cty _size_bound>](config)
                     }
@@ -314,15 +278,11 @@ mod private {
                         sz3_sys::[<compress_ $cty>](config, data, compressed_data.cast(), compressed_capacity)
                     }
 
-                    unsafe fn decompress_num(compressed_data: *const u8, compressed_len: usize) -> usize {
-                        sz3_sys::[<decompress_ $cty _num>](compressed_data.cast(), compressed_len)
-                    }
-
                     unsafe fn decompress(
                         compressed_data: *const u8,
                         compressed_len: usize,
                         decompressed_data: *mut Self,
-                    ) -> sz3_sys::SZ3_Config {
+                    ) {
                         sz3_sys::[<decompress_ $cty>](compressed_data.cast(), compressed_len, decompressed_data)
                     }
                 }
@@ -331,16 +291,16 @@ mod private {
     }
 
     impl_sealed!(
-        u8 => uint8_t,
-        i8 => int8_t,
-        u16 => uint16_t,
-        i16 => int16_t,
-        u32 => uint32_t,
-        i32 => int32_t,
-        u64 => uint64_t,
-        i64 => int64_t,
-        f32 => float,
-        f64 => double
+        u8 => uint8_t[UINT8],
+        i8 => int8_t[INT8],
+        u16 => uint16_t[UINT16],
+        i16 => int16_t[INT16],
+        u32 => uint32_t[UINT32],
+        i32 => int32_t[INT32],
+        u64 => uint64_t[UINT64],
+        i64 => int64_t[INT64],
+        f32 => float[FLOAT],
+        f64 => double[DOUBLE]
     );
 }
 
@@ -411,6 +371,8 @@ pub enum SZ3Error {
         len: usize,
         remainder: usize,
     },
+    #[error("cannot decompress to array with a different data type")]
+    DecompressedDataTypeMismatch,
 }
 
 type Result<T> = std::result::Result<T, SZ3Error>;
@@ -547,10 +509,7 @@ pub fn compress_with_config<V: SZ3Compressible, T: std::ops::Deref<Target = [V]>
         regression: config.compression_algorithm.regression(),
         regression2: config.compression_algorithm.regression_second_order(),
         openmp: config.openmp,
-        interpAlgo: config
-            .compression_algorithm
-            .interpolation_algorithm()
-            .code(),
+        dataType: V::SZ_DATA_TYPE as _,
         blockSize: block_size as _,
         quantbinCnt: config.quantization_bincount as _,
     };
@@ -573,32 +532,45 @@ pub fn compress_with_config<V: SZ3Compressible, T: std::ops::Deref<Target = [V]>
 
 pub fn decompress<V: SZ3Compressible, T: std::ops::Deref<Target = [u8]>>(
     compressed_data: T,
-) -> (Config, DimensionedData<V, Vec<V>>) {
-    let len = unsafe { V::decompress_num(compressed_data.as_ptr(), compressed_data.len()) };
-    let mut data = Vec::with_capacity(len);
-
-    let config = unsafe {
-        V::decompress(
-            compressed_data.as_ptr(),
-            compressed_data.len(),
-            data.as_mut_ptr(),
-        )
+) -> Result<(Config, DimensionedData<V, Vec<V>>)> {
+    let (config, dims, len, data_type) = {
+        let config = unsafe {
+            sz3_sys::decompress_config(compressed_data.as_ptr().cast(), compressed_data.len())
+        };
+        let dims = (0..config.N)
+            .map(|i| unsafe { std::ptr::read(config.dims.add(i as _)) })
+            .collect();
+        unsafe {
+            sz3_sys::dealloc_size_t(config.dims);
+        }
+        let SZ3_Config {
+            num: len,
+            dataType: data_type,
+            ..
+        } = config;
+        (Config::from_decompressed(config), dims, len, data_type)
     };
-    unsafe { data.set_len(len) };
 
-    let decoded = Config::from_decompressed(config);
+    if data_type != (V::SZ_DATA_TYPE as _) {
+        return Err(SZ3Error::DecompressedDataTypeMismatch);
+    }
 
-    let dims = (0..config.N)
-        .map(|i| unsafe { std::ptr::read(config.dims.add(i as _)) })
-        .collect();
+    let data = {
+        let mut data = Vec::with_capacity(len);
+        unsafe {
+            V::decompress(
+                compressed_data.as_ptr(),
+                compressed_data.len(),
+                data.as_mut_ptr(),
+            );
+            data.set_len(len);
+        }
+        data
+    };
 
     let data = DimensionedData { data, dims };
 
-    unsafe {
-        sz3_sys::dealloc_config_dims(config.dims);
-    }
-
-    (decoded, data)
+    Ok((config, data))
 }
 
 #[cfg(test)]
@@ -627,7 +599,7 @@ mod tests {
     {
         let config = config.clone().error_bound(error_bound);
         let (_decompressed_config, decompressed_data) =
-            decompress::<T, _>(&*compress_with_config(data, &config)?);
+            decompress::<T, _>(&*compress_with_config(data, &config)?)?;
         let min = data
             .data()
             .iter()
@@ -793,10 +765,8 @@ mod tests {
             })
         ],
         ([
-            (interpolation_linear, CompressionAlgorithm::Interpolation { interpolation: InterpolationAlgorithm::Linear }),
-            (interpolation_cubic, CompressionAlgorithm::Interpolation { interpolation: InterpolationAlgorithm::Cubic }),
-            (interpolation_lorenzo_linear, CompressionAlgorithm::InterpolationLorenzo { interpolation: InterpolationAlgorithm::Linear }),
-            (interpolation_lorenzo_cubic, CompressionAlgorithm::InterpolationLorenzo { interpolation: InterpolationAlgorithm::Cubic }),
+            (interpolation, CompressionAlgorithm::Interpolation),
+            (interpolation_lorenzo, CompressionAlgorithm::InterpolationLorenzo),
             (lorenzo_reg, CompressionAlgorithm::lorenzo_regression()),
             (lorenzo_reg_all, CompressionAlgorithm::lorenzo_regression_custom(
                 Some(true),
