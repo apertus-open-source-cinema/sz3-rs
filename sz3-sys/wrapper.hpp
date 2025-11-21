@@ -2,19 +2,6 @@
 
 #include "SZ3/api/sz.hpp"
 
-enum SZ_DATA_TYPE {
-    FLOAT = SZ_FLOAT,
-    DOUBLE = SZ_DOUBLE,
-    UINT8 = SZ_UINT8,
-    INT8 = SZ_INT8,
-    UINT16 = SZ_UINT16,
-    INT16 = SZ_INT16,
-    UINT32 = SZ_UINT32,
-    INT32 = SZ_INT32,
-    UINT64 = SZ_UINT64,
-    INT64 = SZ_INT64,
-};
-
 struct SZ3_Config {
     char N;
     size_t * dims;
@@ -76,28 +63,35 @@ struct SZ3_Config {
 };
 
 
-#define func(ty) \
-    size_t compress_ ## ty ## _size_bound(SZ3_Config config) { \
+#define func(ns, type, dt) \
+  namespace ns { \
+    using ty = type; \
+	enum DATA_TYPE : uint8_t { \
+      TYPE = dt \
+    }; \
+    size_t compress_size_bound(SZ3_Config config) { \
         return SZ3::SZ_compress_size_bound<ty>(config.into()); \
     } \
-    size_t compress_ ## ty(SZ3_Config config, const ty * data, char * compressedData, size_t compressedCapacity) { \
+    size_t compress(SZ3_Config config, const ty * data, char * compressedData, size_t compressedCapacity) { \
         return SZ_compress<ty>(config.into(), data, compressedData, compressedCapacity); \
     } \
-    void decompress_ ## ty(const char * compressedData, size_t compressedSize, ty * decompressedData) { \
+    void decompress(const char * compressedData, size_t compressedSize, ty * decompressedData) { \
         auto conf = SZ3::Config{}; \
         SZ_decompress<ty>(conf, compressedData, compressedSize, decompressedData); \
-    }
+    } \
+  }
 
-func(float)
-func(double)
-func(uint8_t)
-func(int8_t)
-func(uint16_t)
-func(int16_t)
-func(uint32_t)
-func(int32_t)
-func(uint64_t)
-func(int64_t)
+
+func(impl_f32, float, SZ_FLOAT)
+func(impl_f64, double, SZ_DOUBLE)
+func(impl_u8, uint8_t, SZ_UINT8)
+func(impl_i8, int8_t, SZ_INT8)
+func(impl_u16, uint16_t, SZ_UINT16)
+func(impl_i16, int16_t, SZ_INT16)
+func(impl_u32, uint32_t, SZ_UINT32)
+func(impl_i32, int32_t, SZ_INT32)
+func(impl_u64, uint64_t, SZ_UINT64)
+func(impl_i64, int64_t, SZ_INT64)
 
 SZ3_Config decompress_config(const char * compressedData, size_t compressedSize) {
     auto cmpDataPos = reinterpret_cast<const SZ3::uchar *>(compressedData);
