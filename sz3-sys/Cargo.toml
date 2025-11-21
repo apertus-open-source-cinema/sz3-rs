@@ -3,7 +3,10 @@ name = "sz3-sys"
 version = "0.4.0+SZ3-3.3.2"
 edition = "2021"
 license = "GPL-3.0-only"
-authors = ["Robin Ole Heinemann <robin.ole.heinemann@gmail.com>"]
+authors = [
+    "Robin Ole Heinemann <robin.ole.heinemann@gmail.com>",
+    "Juniper Tyree <juniper.tyree@helsinki.fi>",
+]
 description = "Low level bindigs to SZ3."
 repository = "https://github.com/apertus-open-source-cinema/sz3-rs/"
 keywords = ["compress"]

@@ -225,7 +225,7 @@ impl SZ3Compressible for u64 {}
 impl SZ3Compressible for i64 {}
 
 mod private {
-    pub trait Sealed {
+    pub trait Sealed: Copy {
         const SZ_DATA_TYPE: sz3_sys::SZ_DATA_TYPE;
 
         unsafe fn compress_size_bound(config: sz3_sys::SZ3_Config) -> usize;
@@ -358,6 +358,11 @@ pub enum SZ3Error {
     },
     #[error("cannot decompress to array with a different data type")]
     DecompressedDataTypeMismatch,
+    #[error("cannot decompress array with dimensions {found:?} to array with different dimensions {expected:?}")]
+    DecompressedDimsMismatch {
+        found: Vec<usize>,
+        expected: Vec<usize>,
+    },
 }
 
 type Result<T> = std::result::Result<T, SZ3Error>;
@@ -478,6 +483,15 @@ pub fn compress_with_config<V: SZ3Compressible, T: std::ops::Deref<Target = [V]>
     Ok(compressed_data)
 }
 
+pub fn compress_into<V: SZ3Compressible, T: std::ops::Deref<Target = [V]>>(
+    data: &DimensionedData<V, T>,
+    error_bound: ErrorBound,
+    compressed_data: &mut Vec<u8>,
+) -> Result<()> {
+    let config = Config::new(error_bound);
+    compress_into_with_config(data, &config, compressed_data)
+}
+
 pub fn compress_into_with_config<V: SZ3Compressible, T: std::ops::Deref<Target = [V]>>(
     data: &DimensionedData<V, T>,
     config: &Config,
@@ -530,7 +544,95 @@ pub fn compress_into_with_config<V: SZ3Compressible, T: std::ops::Deref<Target =
 pub fn decompress<V: SZ3Compressible, T: std::ops::Deref<Target = [u8]>>(
     compressed_data: T,
 ) -> Result<(Config, DimensionedData<V, Vec<V>>)> {
-    let (config, dims, len, data_type) = {
+    let DecompressedConfig {
+        config,
+        len,
+        dims,
+        data_type,
+    } = DecompressedConfig::from_compressed(&compressed_data);
+
+    if data_type != (V::SZ_DATA_TYPE as _) {
+        return Err(SZ3Error::DecompressedDataTypeMismatch);
+    }
+
+    let decompressed_data = unsafe {
+        let mut decompressed_data = Vec::with_capacity(len);
+
+        // safety: decompressed data is uninitialized and valid for 0..len
+        V::decompress(
+            compressed_data.as_ptr(),
+            compressed_data.len(),
+            decompressed_data
+                .spare_capacity_mut()
+                .as_mut_ptr()
+                .cast::<V>(),
+        );
+
+        // safety: decompressed data is initialized for 0..len
+        decompressed_data.set_len(len);
+        decompressed_data
+    };
+
+    Ok((
+        config,
+        DimensionedData {
+            data: decompressed_data,
+            dims,
+        },
+    ))
+}
+
+pub fn decompress_into_dimensioned<
+    V: SZ3Compressible,
+    C: std::ops::Deref<Target = [u8]>,
+    D: std::ops::DerefMut<Target = [V]>,
+>(
+    compressed_data: C,
+    decompressed_data: &mut DimensionedData<V, D>,
+) -> Result<Config> {
+    let DecompressedConfig {
+        config,
+        len,
+        dims,
+        data_type,
+    } = DecompressedConfig::from_compressed(&compressed_data);
+
+    if data_type != (V::SZ_DATA_TYPE as _) {
+        return Err(SZ3Error::DecompressedDataTypeMismatch);
+    }
+
+    if decompressed_data.dims() != dims.as_slice() {
+        return Err(SZ3Error::DecompressedDimsMismatch {
+            found: dims,
+            expected: decompressed_data.dims.clone(),
+        });
+    }
+
+    // must succeed unless SZ3 decompression was corrupted
+    assert_eq!(decompressed_data.len(), len);
+
+    // safety: decompressed data is initialized for 0..len
+    //         *and* V: Copy, so we can just override the elements
+    unsafe {
+        V::decompress(
+            compressed_data.as_ptr(),
+            compressed_data.len(),
+            decompressed_data.data.as_mut_ptr(),
+        );
+    }
+
+    Ok(config)
+}
+
+struct DecompressedConfig {
+    config: Config,
+    len: usize,
+    dims: Vec<usize>,
+    data_type: u8,
+}
+
+impl DecompressedConfig {
+    fn from_compressed(compressed_data: &[u8]) -> Self {
         let config = unsafe {
             sz3_sys::decompress_config(compressed_data.as_ptr().cast(), compressed_data.len())
         };
@@ -545,29 +647,14 @@ pub fn decompress<V: SZ3Compressible, T: std::ops::Deref<Target = [u8]>>(
             dataType: data_type,
             ..
         } = config;
-        (Config::from_decompressed(config), dims, len, data_type)
-    };
-
-    if data_type != (V::SZ_DATA_TYPE as _) {
-        return Err(SZ3Error::DecompressedDataTypeMismatch);
-    }
-
-    let data = {
-        let mut data = Vec::with_capacity(len);
-        unsafe {
-            V::decompress(
-                compressed_data.as_ptr(),
-                compressed_data.len(),
-                data.as_mut_ptr(),
-            );
-            data.set_len(len);
+        let config = Config::from_decompressed(config);
+        Self {
+            config,
+            len,
+            dims,
+            data_type,
         }
-        data
-    };
-
-    let data = DimensionedData { data, dims };
-
-    Ok((config, data))
+    }
 }
 
 #[cfg(test)]
