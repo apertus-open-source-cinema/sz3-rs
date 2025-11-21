@@ -28,7 +28,6 @@ struct SZ3_Config {
     bool lorenzo;
     bool lorenzo2;
     bool regression;
-    bool regression2;
     bool openmp;
     uint8_t dataType;
     int quantbinCnt;
@@ -48,7 +47,6 @@ struct SZ3_Config {
         conf.lorenzo = lorenzo;
         conf.lorenzo2 = lorenzo2;
         conf.regression = regression;
-        conf.regression2 = regression2;
         conf.openmp = openmp;
         conf.dataType = dataType;
         conf.quantbinCnt = quantbinCnt;
@@ -70,7 +68,6 @@ struct SZ3_Config {
         lorenzo = conf.lorenzo;
         lorenzo2 = conf.lorenzo2;
         regression = conf.regression;
-        regression2 = conf.regression2;
         openmp = conf.openmp;
         dataType = conf.dataType;
         quantbinCnt = conf.quantbinCnt;
