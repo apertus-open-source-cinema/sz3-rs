@@ -488,6 +488,16 @@ pub fn compress_with_config<V: SZ3Compressible, T: std::ops::Deref<Target = [V]>
     data: &DimensionedData<V, T>,
     config: &Config,
 ) -> Result<Vec<u8>> {
+    let mut compressed_data = Vec::new();
+    compress_into_with_config(data, config, &mut compressed_data)?;
+    Ok(compressed_data)
+}
+
+pub fn compress_into_with_config<V: SZ3Compressible, T: std::ops::Deref<Target = [V]>>(
+    data: &DimensionedData<V, T>,
+    config: &Config,
+    compressed_data: &mut Vec<u8>,
+) -> Result<()> {
     let block_size = config.block_size.unwrap_or(match data.dims().len() {
         1 => 128,
         2 => 16,
@@ -515,19 +525,22 @@ pub fn compress_with_config<V: SZ3Compressible, T: std::ops::Deref<Target = [V]>
     };
 
     let capacity: usize = unsafe { V::compress_size_bound(raw_config) };
-    let mut compressed_data = Vec::with_capacity(capacity);
+    compressed_data.reserve(capacity);
 
     let len = unsafe {
         V::compress(
             raw_config,
             data.as_ptr(),
-            compressed_data.as_mut_ptr(),
+            compressed_data
+                .spare_capacity_mut()
+                .as_mut_ptr()
+                .cast::<u8>(),
             capacity,
         )
     };
-    unsafe { compressed_data.set_len(len) };
+    unsafe { compressed_data.set_len(compressed_data.len() + len) };
 
-    Ok(compressed_data)
+    Ok(())
 }
 
 pub fn decompress<V: SZ3Compressible, T: std::ops::Deref<Target = [u8]>>(
