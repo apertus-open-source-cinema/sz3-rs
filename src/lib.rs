@@ -614,6 +614,35 @@ mod tests {
             .fold(f64::MIN, f64::max);
         let range = max - min;
 
+        // the BIOMDXTC algorithm uses non-strict error bounding, see
+        // https://github.com/apertus-open-source-cinema/sz3-rs/pull/11#discussion_r2548199107
+        let error_bound = if let CompressionAlgorithm::BiologyMolecularDataGromacsXtc =
+            config.compression_algorithm
+        {
+            match error_bound {
+                ErrorBound::Absolute(absolute_bound) => ErrorBound::Absolute(absolute_bound * 2.0),
+                ErrorBound::Relative(relative_bound) => ErrorBound::Relative(relative_bound * 2.0),
+                ErrorBound::PSNR(psnr_bound) => ErrorBound::PSNR(psnr_bound * 2.0),
+                ErrorBound::L2Norm(l2norm_bound) => ErrorBound::L2Norm(l2norm_bound * 2.0),
+                ErrorBound::AbsoluteAndRelative {
+                    absolute_bound,
+                    relative_bound,
+                } => ErrorBound::AbsoluteAndRelative {
+                    absolute_bound: absolute_bound * 2.0,
+                    relative_bound: relative_bound * 2.0,
+                },
+                ErrorBound::AbsoluteOrRelative {
+                    absolute_bound,
+                    relative_bound,
+                } => ErrorBound::AbsoluteOrRelative {
+                    absolute_bound: absolute_bound * 2.0,
+                    relative_bound: relative_bound * 2.0,
+                },
+            }
+        } else {
+            error_bound
+        };
+
         match error_bound {
             ErrorBound::Absolute(absolute_bound) => {
                 for (orig, compressed) in data.data().iter().zip(decompressed_data.data()) {
@@ -775,7 +804,7 @@ mod tests {
                 Some(true),
             )),
             (biomd, CompressionAlgorithm::BiologyMolecularData),
-            // (biomdxtc, CompressionAlgorithm::BiologyMolecularDataGromacsXtc),
+            (biomdxtc, CompressionAlgorithm::BiologyMolecularDataGromacsXtc),
             (no_prediction, CompressionAlgorithm::NoPrediction),
             (lossless, CompressionAlgorithm::Lossless)
         ],
