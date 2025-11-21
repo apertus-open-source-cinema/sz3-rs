@@ -212,7 +212,7 @@ pub struct Config {
     block_size: Option<u32>,
 }
 
-pub trait SZ3Compressible: private::Sealed + std::ops::Sub<Output = Self> + Sized {}
+pub trait SZ3Compressible: private::Sealed + Sized {}
 impl SZ3Compressible for f32 {}
 impl SZ3Compressible for f64 {}
 impl SZ3Compressible for u8 {}
