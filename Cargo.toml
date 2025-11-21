@@ -2,7 +2,10 @@
 name = "sz3"
 version = "0.4.0+SZ3-3.3.2"
 edition = "2021"
-authors = ["Robin Ole Heinemann <robin.ole.heinemann@gmail.com>"]
+authors = [
+    "Robin Ole Heinemann <robin.ole.heinemann@gmail.com>",
+    "Juniper Tyree <juniper.tyree@helsinki.fi>",
+]
 description = "High level bindings to the SZ3 lossy floating point compressor."
 repository = "https://github.com/apertus-open-source-cinema/sz3-rs/"
 license = "MIT OR Apache-2.0"
