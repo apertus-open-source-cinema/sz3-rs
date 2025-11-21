@@ -11,7 +11,6 @@ pub enum CompressionAlgorithm {
         lorenzo: bool,
         lorenzo_second_order: bool,
         regression: bool,
-        regression_second_order: bool,
     },
     BiologyMolecularData,
     BiologyMolecularDataGromacsXtc,
@@ -28,7 +27,6 @@ impl CompressionAlgorithm {
                 lorenzo: config.lorenzo,
                 lorenzo_second_order: config.lorenzo2,
                 regression: config.regression,
-                regression_second_order: config.regression2,
             },
             sz3_sys::SZ3_ALGO_ALGO_BIOMD => Self::BiologyMolecularData,
             sz3_sys::SZ3_ALGO_ALGO_BIOMDXTC => Self::BiologyMolecularDataGromacsXtc,
@@ -74,16 +72,6 @@ impl CompressionAlgorithm {
         }
     }
 
-    fn regression_second_order(&self) -> bool {
-        match self {
-            Self::LorenzoRegression {
-                regression_second_order,
-                ..
-            } => *regression_second_order,
-            _ => true,
-        }
-    }
-
     pub fn interpolation() -> Self {
         Self::Interpolation
     }
@@ -97,7 +85,6 @@ impl CompressionAlgorithm {
             lorenzo: true,
             lorenzo_second_order: false,
             regression: true,
-            regression_second_order: false,
         }
     }
 
@@ -105,13 +92,11 @@ impl CompressionAlgorithm {
         lorenzo: Option<bool>,
         lorenzo_second_order: Option<bool>,
         regression: Option<bool>,
-        regression_second_order: Option<bool>,
     ) -> Self {
         Self::LorenzoRegression {
             lorenzo: lorenzo.unwrap_or(true),
             lorenzo_second_order: lorenzo_second_order.unwrap_or(false),
             regression: regression.unwrap_or(true),
-            regression_second_order: regression_second_order.unwrap_or(true),
         }
     }
 
@@ -517,7 +502,6 @@ pub fn compress_into_with_config<V: SZ3Compressible, T: std::ops::Deref<Target =
         lorenzo: config.compression_algorithm.lorenzo(),
         lorenzo2: config.compression_algorithm.lorenzo_second_order(),
         regression: config.compression_algorithm.regression(),
-        regression2: config.compression_algorithm.regression_second_order(),
         openmp: config.openmp,
         dataType: V::SZ_DATA_TYPE as _,
         blockSize: block_size as _,
@@ -810,8 +794,37 @@ mod tests {
             (interpolation, CompressionAlgorithm::Interpolation),
             (interpolation_lorenzo, CompressionAlgorithm::InterpolationLorenzo),
             (lorenzo_reg, CompressionAlgorithm::lorenzo_regression()),
-            (lorenzo_reg_all, CompressionAlgorithm::lorenzo_regression_custom(
+            (lorenzo_reg_r, CompressionAlgorithm::lorenzo_regression_custom(
+                Some(false),
+                Some(false),
                 Some(true),
+            )),
+            (lorenzo_reg_l2, CompressionAlgorithm::lorenzo_regression_custom(
+                Some(false),
+                Some(true),
+                Some(false),
+            )),
+            (lorenzo_reg_l2r, CompressionAlgorithm::lorenzo_regression_custom(
+                Some(false),
+                Some(false),
+                Some(true),
+            )),
+            (lorenzo_reg_l, CompressionAlgorithm::lorenzo_regression_custom(
+                Some(true),
+                Some(false),
+                Some(false),
+            )),
+            (lorenzo_reg_lr, CompressionAlgorithm::lorenzo_regression_custom(
+                Some(true),
+                Some(false),
+                Some(true),
+            )),
+            (lorenzo_reg_ll2, CompressionAlgorithm::lorenzo_regression_custom(
+                Some(true),
+                Some(true),
+                Some(false),
+            )),
+            (lorenzo_reg_ll2r, CompressionAlgorithm::lorenzo_regression_custom(
                 Some(true),
                 Some(true),
                 Some(true),
