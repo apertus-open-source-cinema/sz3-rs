@@ -274,11 +274,8 @@ mod private {
     }
 
     impl_sealed!(
-        impl_u8, impl_i8,
-        impl_u16, impl_i16,
-        impl_u32, impl_i32,
-        impl_u64, impl_i64,
-        impl_f32, impl_f64
+        impl_u8, impl_i8, impl_u16, impl_i16, impl_u32, impl_i32, impl_u64, impl_i64, impl_f32,
+        impl_f64
     );
 }
 
@@ -325,6 +322,27 @@ impl<V: SZ3Compressible, T: std::ops::Deref<Target = [V]>> DimensionedData<V, T>
     }
 }
 
+#[derive(Debug)]
+pub struct DimensionedDataBuilderMut<'a, V> {
+    data: &'a mut [V],
+    dims: Vec<usize>,
+    remainder: usize,
+}
+
+impl<V: SZ3Compressible, T: std::ops::DerefMut<Target = [V]>> DimensionedData<V, T> {
+    pub fn build_mut<'a>(data: &'a mut T) -> DimensionedDataBuilderMut<'a, V> {
+        DimensionedDataBuilderMut {
+            remainder: data.len(),
+            data,
+            dims: vec![],
+        }
+    }
+
+    pub fn data_mut(&mut self) -> &mut [V] {
+        &mut self.data
+    }
+}
+
 #[derive(thiserror::Error, Debug)]
 pub enum SZ3Error {
     #[error(
@@ -360,49 +378,55 @@ pub enum SZ3Error {
 
 type Result<T> = std::result::Result<T, SZ3Error>;
 
-impl<'a, V: SZ3Compressible> DimensionedDataBuilder<'a, V> {
-    pub fn dim(mut self, length: usize) -> Result<Self> {
-        if length == 1 {
-            if self.dims.is_empty() && self.remainder == 1 {
-                self.dims.push(1);
-                Ok(self)
-            } else {
-                Err(SZ3Error::OneSizedDimension)
+macro_rules! impl_dimensioned_data_builder {
+    ($($ty:ident),*) => {
+        $(impl<'a, V: SZ3Compressible> $ty<'a, V> {
+            pub fn dim(mut self, length: usize) -> Result<Self> {
+                if length == 1 {
+                    if self.dims.is_empty() && self.remainder == 1 {
+                        self.dims.push(1);
+                        Ok(self)
+                    } else {
+                        Err(SZ3Error::OneSizedDimension)
+                    }
+                } else if self.remainder.rem_euclid(length) != 0 {
+                    Err(SZ3Error::InvalidDimensionSize {
+                        dims: self.dims,
+                        len: self.data.len(),
+                        wanted: length,
+                        remainder: self.remainder,
+                    })
+                } else {
+                    self.dims.push(length as _);
+                    self.remainder /= length;
+                    Ok(self)
+                }
             }
-        } else if self.remainder.rem_euclid(length) != 0 {
-            Err(SZ3Error::InvalidDimensionSize {
-                dims: self.dims,
-                len: self.data.len(),
-                wanted: length,
-                remainder: self.remainder,
-            })
-        } else {
-            self.dims.push(length as _);
-            self.remainder /= length;
-            Ok(self)
-        }
-    }
 
-    pub fn remainder_dim(self) -> Result<DimensionedData<V, &'a [V]>> {
-        let remainder = self.remainder;
-        self.dim(remainder)?.finish()
-    }
+            pub fn remainder_dim(self) -> Result<DimensionedData<V, &'a [V]>> {
+                let remainder = self.remainder;
+                self.dim(remainder)?.finish()
+            }
 
-    pub fn finish(self) -> Result<DimensionedData<V, &'a [V]>> {
-        if self.remainder != 1 {
-            Err(SZ3Error::UnderSpecifiedDimensions {
-                dims: self.dims,
-                len: self.data.len(),
-                remainder: self.remainder,
-            })
-        } else {
-            Ok(DimensionedData {
-                data: self.data,
-                dims: self.dims,
-            })
-        }
-    }
+            pub fn finish(self) -> Result<DimensionedData<V, &'a [V]>> {
+                if self.remainder != 1 {
+                    Err(SZ3Error::UnderSpecifiedDimensions {
+                        dims: self.dims,
+                        len: self.data.len(),
+                        remainder: self.remainder,
+                    })
+                } else {
+                    Ok(DimensionedData {
+                        data: self.data,
+                        dims: self.dims,
+                    })
+                }
+            }
+        })*
+    };
 }
+
+impl_dimensioned_data_builder! { DimensionedDataBuilder, DimensionedDataBuilderMut }
 
 impl Config {
     fn from_decompressed(config: sz3_sys::SZ3_Config) -> Self {
