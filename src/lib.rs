@@ -379,8 +379,8 @@ pub enum SZ3Error {
 type Result<T> = std::result::Result<T, SZ3Error>;
 
 macro_rules! impl_dimensioned_data_builder {
-    ($($ty:ident),*) => {
-        $(impl<'a, V: SZ3Compressible> $ty<'a, V> {
+    ($($builder:ident => $data:ty),*) => {
+        $(impl<'a, V: SZ3Compressible> $builder<'a, V> {
             pub fn dim(mut self, length: usize) -> Result<Self> {
                 if length == 1 {
                     if self.dims.is_empty() && self.remainder == 1 {
@@ -403,12 +403,12 @@ macro_rules! impl_dimensioned_data_builder {
                 }
             }
 
-            pub fn remainder_dim(self) -> Result<DimensionedData<V, &'a [V]>> {
+            pub fn remainder_dim(self) -> Result<$data> {
                 let remainder = self.remainder;
                 self.dim(remainder)?.finish()
             }
 
-            pub fn finish(self) -> Result<DimensionedData<V, &'a [V]>> {
+            pub fn finish(self) -> Result<$data> {
                 if self.remainder != 1 {
                     Err(SZ3Error::UnderSpecifiedDimensions {
                         dims: self.dims,
@@ -426,7 +426,10 @@ macro_rules! impl_dimensioned_data_builder {
     };
 }
 
-impl_dimensioned_data_builder! { DimensionedDataBuilder, DimensionedDataBuilderMut }
+impl_dimensioned_data_builder! {
+    DimensionedDataBuilder => DimensionedData<V, &'a [V]>,
+    DimensionedDataBuilderMut => DimensionedData<V, &'a mut  [V]>
+}
 
 impl Config {
     fn from_decompressed(config: sz3_sys::SZ3_Config) -> Self {
