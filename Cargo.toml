@@ -1,6 +1,6 @@
 [package]
 name = "sz3"
-version = "0.4.1+SZ3-3.3.2"
+version = "0.4.2+SZ3-3.3.2"
 edition = "2021"
 authors = [
     "Robin Ole Heinemann <robin.ole.heinemann@gmail.com>",
